@@ -1,7 +1,7 @@
 // ─────────────────────────────────────────────
 //  KRHDev Todo App  –  script.js
 //  CRUD: Create · Read · Update · Delete
-//  Features: Named lists · Light/Dark mode
+//  Features: Named lists · Light/Dark mode - mobile friendly · Change log · Local storage
 // ─────────────────────────────────────────────
 
 // ── Theme ────────────────────────────────────
