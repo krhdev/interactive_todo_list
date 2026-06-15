@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 
@@ -13,37 +14,79 @@
 
     <div class="container">
         <div class="sidebar">
-            <h2>KRHDev's To Do List Application</h2>
+            <h2>KRHDev's To Do List App</h2>
             <ul>
-                <li>New List</li>
-                <li>View Lists</li>
-                <li>Add Task</li>
-                <li>View Tasks</li>
-                <li>Complete Task</li>
-                <li>Delete Task</li>
-                <li>Settings</li>
-                <li>Deleted Lists</li>
+                <li><a href="#" data-view="home">Home</a></li>
+                <li><a href="#" data-view="all">View Lists</a></li>
+                <li><a href="#" data-view="completed">View Completed</a></li>
+                <li><a href="#" data-view="deleted">View Deleted</a></li>
+                <li><a href="#" data-view="log">Recent Changes</a></li>
+                <li><a href="settings.htm">Settings</a></li>
             </ul>
+            <div class="sidebar-stats">
+                <span id="stat-active">0 active</span>
+                <span id="stat-done">0 done</span>
+            </div>
         </div>
 
         <div class="main-content">
-            <h1 id="page-title">Interactive TO DO List</h1>
+            <h1 id="page-title">My To-Do Lists</h1>
+
+            <!-- CREATE LIST -->
             <div class="widget">
-                <h2>Lists</h2>
-                <p>Display your to-do lists here.</p>
+                <h2>New List</h2>
+                <div class="add-form">
+                    <input type="text" id="new-list" placeholder="Enter list name" />
+                    <button id="add-list-btn">Create List</button>
+                </div>
             </div>
-            <div class="widget">
+
+            <!-- LIST SELECTOR — shown once lists exist -->
+            <div class="widget" id="widget-list-selector" style="display:none;">
+                <h2>Your Lists</h2>
+                <div id="list-tabs" class="list-tabs"></div>
+            </div>
+
+            <!-- ADD TASK — only shown when a list is selected -->
+            <div class="widget" id="widget-add-task" style="display:none;">
+                <h2>Add a Task <span id="active-list-label" class="active-list-label"></span></h2>
+                <div class="add-form">
+                    <input type="text" id="new-todo" placeholder="What needs doing?" />
+                    <button id="add-btn">Add Task</button>
+                </div>
+            </div>
+
+            <!-- READ — Active tasks -->
+            <div class="widget" id="widget-all" style="display:none;">
+                <h2>Active Tasks</h2>
+                <p class="empty-msg" id="empty-active">No active tasks. Add one above!</p>
+                <ul id="list-container"></ul>
+            </div>
+
+            <!-- READ — Completed tasks -->
+            <div class="widget" id="widget-completed" style="display:none;">
+                <h2>Completed Tasks</h2>
+                <p class="empty-msg" id="empty-completed">No completed tasks yet.</p>
+                <ul id="completed-list-container"></ul>
+            </div>
+
+            <!-- READ — Deleted tasks -->
+            <div class="widget" id="widget-deleted" style="display:none;">
+                <h2>Deleted Tasks</h2>
+                <p class="empty-msg" id="empty-deleted">Nothing deleted.</p>
+                <ul id="deleted-list-container"></ul>
+                <button id="clear-deleted-btn" class="btn-secondary" style="display:none;">Clear Deleted</button>
+            </div>
+
+            <!-- Recent Changes log -->
+            <div class="widget" id="widget-log" style="display:none;">
                 <h2>Recent Changes</h2>
-                <p>Show recent changes here.</p>
-            </div>
-            <div class="widget">
-                <h2>Deleted Lists</h2>
-                <p>Visualize deleted lists here.</p>
+                <p class="empty-msg" id="empty-log">No changes yet.</p>
+                <ul id="recent-changes-container"></ul>
             </div>
         </div>
     </div>
 
+    <script src="./assets/js/script.js"></script>
 </body>
-<script src="./assets/js/script.js"></script>
-
 </html>

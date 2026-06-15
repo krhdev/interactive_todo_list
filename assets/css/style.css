@@ -1,57 +1,409 @@
-body,
-html {
-    margin: 0;
-    padding: 0;
-    font-family: 'Roboto', sans-serif;
-    background-color: #f4f6f9;
+/* ── Reset ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* ── CSS Variables — Light (default) ── */
+:root {
+    --brand:          #510061;
+    --brand-dark:     #3a0045;
+    --bg:             #f4f6f9;
+    --surface:        #ffffff;
+    --surface-2:      #f0f0f0;
+    --border:         #e0e0e0;
+    --text:           #2c2c2c;
+    --text-muted:     #888;
+    --text-faint:     #bbb;
+    --text-done:      #aaa;
+    --shadow:         rgba(0,0,0,0.07);
+    --input-border:   #ddd;
+    --item-border:    #f0f0f0;
+    --log-border:     #f5f5f5;
+    --btn-secondary-bg:    #eee;
+    --btn-secondary-color: #444;
+    --btn-secondary-hover: #ddd;
+    --tab-bg:         #eee;
+    --tab-color:      #555;
+    --tab-active-bg:  #510061;
+    --tab-active-color: #fff;
 }
 
+/* ── Dark mode overrides ── */
+[data-theme="dark"] {
+    --bg:             #1a1a2e;
+    --surface:        #16213e;
+    --surface-2:      #0f3460;
+    --border:         #2a2a4a;
+    --text:           #e0e0e0;
+    --text-muted:     #9090a0;
+    --text-faint:     #606070;
+    --text-done:      #606070;
+    --shadow:         rgba(0,0,0,0.3);
+    --input-border:   #2a2a4a;
+    --item-border:    #1e1e3a;
+    --log-border:     #1e1e3a;
+    --btn-secondary-bg:    #2a2a4a;
+    --btn-secondary-color: #c0c0d0;
+    --btn-secondary-hover: #3a3a5a;
+    --tab-bg:         #2a2a4a;
+    --tab-color:      #c0c0d0;
+    --tab-active-bg:  #510061;
+    --tab-active-color: #fff;
+}
+
+/* ── Base ── */
+body, html {
+    font-family: 'Roboto', sans-serif;
+    background-color: var(--bg);
+    color: var(--text);
+    transition: background-color 0.2s, color 0.2s;
+}
+
+/* ── Layout ── */
 .container {
     display: flex;
-    height: 100vh;
+    min-height: 100vh;
 }
 
+/* ── Sidebar ── */
 .sidebar {
-    width: 250px;
-    background-color: #510061;
+    width: 240px;
+    flex-shrink: 0;
+    background-color: var(--brand);
     color: white;
     padding-top: 20px;
+    display: flex;
+    flex-direction: column;
 }
 
 .sidebar h2 {
     text-align: center;
-    margin-bottom: 20px;
+    font-size: 1rem;
+    padding: 0 16px 20px;
+    border-bottom: 1px solid rgba(255,255,255,0.15);
 }
 
 .sidebar ul {
-    list-style-type: none;
+    list-style: none;
     padding: 0;
-}  
-
-.sidebar ul li {
-    padding: 15px 20px;
-    border-bottom: 1px solid #3e4f61;
-    cursor: pointer;
+    flex: 1;
 }
 
-.sidebar ul li:hover {
-    background-color: #000000;
+.sidebar ul li { border-bottom: 1px solid rgba(255,255,255,0.08); }
+
+.sidebar ul li a {
+    display: block;
+    padding: 14px 20px;
+    color: white;
+    text-decoration: none;
+    font-size: 0.9rem;
+    transition: background 0.15s;
 }
 
+.sidebar ul li a:hover,
+.sidebar ul li a.active {
+    background-color: rgba(0,0,0,0.25);
+}
+
+.sidebar-stats {
+    padding: 16px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 0.8rem;
+    opacity: 0.7;
+    border-top: 1px solid rgba(255,255,255,0.15);
+}
+
+/* ── Main content ── */
 .main-content {
     flex: 1;
-    padding: 20px;
+    padding: 28px 24px;
     overflow-y: auto;
 }
 
 .main-content h1 {
+    font-size: 1.6rem;
+    color: var(--text);
     margin-bottom: 20px;
 }
 
+/* ── Widget ── */
 .widget {
-    background-color: white;
+    background: var(--surface);
     padding: 20px;
     margin-bottom: 20px;
-    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
     border-radius: 8px;
+    box-shadow: 0 2px 8px var(--shadow);
+    transition: background 0.2s, box-shadow 0.2s;
+}
+
+.widget h2 {
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--brand);
+    margin-bottom: 14px;
+}
+
+/* ── Add form ── */
+.add-form {
+    display: flex;
+    gap: 8px;
+}
+
+.add-form input {
+    flex: 1;
+    padding: 9px 12px;
+    border: 1px solid var(--input-border);
+    border-radius: 6px;
+    font-size: 0.95rem;
+    font-family: inherit;
+    background: var(--surface);
+    color: var(--text);
+    transition: border-color 0.15s, background 0.2s, color 0.2s;
+}
+
+.add-form input:focus {
+    outline: none;
+    border-color: var(--brand);
+}
+
+#add-list-btn,
+#add-btn {
+    padding: 9px 18px;
+    background: var(--brand);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-family: inherit;
+    font-weight: 500;
+    transition: background 0.15s;
+}
+
+#add-list-btn:hover,
+#add-btn:hover { background: var(--brand-dark); }
+
+/* ── List tabs ── */
+.list-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.list-tab {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 20px;
+    background: var(--tab-bg);
+    color: var(--tab-color);
+    border: none;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-family: inherit;
+    transition: background 0.15s, color 0.15s;
+}
+
+.list-tab:hover { opacity: 0.85; }
+
+.list-tab.active {
+    background: var(--tab-active-bg);
+    color: var(--tab-active-color);
+}
+
+.list-tab-delete {
+    background: none;
+    border: none;
+    color: inherit;
+    cursor: pointer;
+    font-size: 1rem;
+    line-height: 1;
+    padding: 0;
+    opacity: 0.6;
+    transition: opacity 0.15s;
+}
+
+.list-tab-delete:hover { opacity: 1; }
+
+.active-list-label {
+    font-weight: 400;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-left: 4px;
+}
+
+/* ── Task list ── */
+.task-list {
+    list-style: none;
+}
+
+.task-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--item-border);
+    transition: border-color 0.2s;
+}
+
+.task-item:last-child { border-bottom: none; }
+
+.task-item input[type="checkbox"] {
+    flex-shrink: 0;
+    width: 17px;
+    height: 17px;
+    accent-color: var(--brand);
+    cursor: pointer;
+}
+
+.task-text {
+    flex: 1;
+    font-size: 0.95rem;
+    color: var(--text);
+    word-break: break-word;
+}
+
+.task-text.done {
+    text-decoration: line-through;
+    color: var(--text-done);
+}
+
+.edit-input {
+    flex: 1;
+    padding: 4px 8px;
+    border: 1px solid var(--brand);
+    border-radius: 4px;
+    font-size: 0.95rem;
+    font-family: inherit;
+    background: var(--surface);
+    color: var(--text);
+}
+
+.edit-input:focus { outline: none; }
+
+/* ── Buttons ── */
+.btn-edit, .btn-delete, .btn-save, .btn-cancel, .btn-restore {
+    padding: 4px 10px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-family: inherit;
+    flex-shrink: 0;
+    transition: background 0.15s;
+}
+
+.btn-edit    { background: var(--btn-secondary-bg); color: var(--btn-secondary-color); }
+.btn-edit:hover { background: var(--btn-secondary-hover); }
+
+.btn-save    { background: var(--brand); color: white; }
+.btn-save:hover { background: var(--brand-dark); }
+
+.btn-cancel  { background: var(--btn-secondary-bg); color: var(--btn-secondary-color); }
+.btn-cancel:hover { background: var(--btn-secondary-hover); }
+
+.btn-delete  { background: #e53935; color: white; }
+.btn-delete:hover { background: #b71c1c; }
+
+.btn-restore { background: #43a047; color: white; }
+.btn-restore:hover { background: #2e7d32; }
+
+.btn-secondary {
+    margin-top: 10px;
+    padding: 6px 14px;
+    background: var(--btn-secondary-bg);
+    color: var(--btn-secondary-color);
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-family: inherit;
+    transition: background 0.15s;
+}
+
+.btn-secondary:hover { background: var(--btn-secondary-hover); }
+
+.btn-danger {
+    padding: 8px 16px;
+    background: #e53935;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 0.9rem;
+    transition: background 0.15s;
+}
+
+.btn-danger:hover { background: #b71c1c; }
+
+/* ── Empty states ── */
+.empty-msg {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    padding: 4px 0;
+}
+
+/* ── Change log ── */
+.log-list { list-style: none; }
+
+.log-item {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    padding: 4px 0;
+    border-bottom: 1px solid var(--log-border);
+}
+
+.log-item:last-child { border-bottom: none; }
+
+.log-item time {
+    font-size: 0.75rem;
+    color: var(--text-faint);
+    margin-left: 6px;
+}
+
+/* ── Deleted task styling ── */
+.task-item.deleted .task-text {
+    text-decoration: line-through;
+    color: var(--text-done);
+}
+
+/* ── Settings page ── */
+.settings-desc {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    margin-bottom: 14px;
+}
+
+.theme-options {
+    display: flex;
+    gap: 10px;
+}
+
+.theme-option {
+    cursor: pointer;
+}
+
+.theme-option input[type="radio"] {
+    display: none;
+}
+
+.theme-pill {
+    display: inline-block;
+    padding: 8px 18px;
+    border-radius: 20px;
+    background: var(--tab-bg);
+    color: var(--tab-color);
+    font-size: 0.9rem;
+    font-family: inherit;
+    border: 2px solid transparent;
+    transition: all 0.15s;
+    cursor: pointer;
+}
+
+.theme-option input[type="radio"]:checked + .theme-pill {
+    background: var(--brand);
+    color: white;
+    border-color: var(--brand-dark);
 }

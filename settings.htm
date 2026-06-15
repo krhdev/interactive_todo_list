@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TO DO List – Settings</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./assets/css/style.css">
+</head>
+
+<body>
+
+    <div class="container">
+        <div class="sidebar">
+            <h2>KRHDev's To Do List</h2>
+            <ul>
+                <li><a href="index.htm">View Lists</a></li>
+                <li><a href="index.htm">View Completed</a></li>
+                <li><a href="index.htm">View Deleted</a></li>
+                <li><a href="settings.htm" class="active">Settings</a></li>
+            </ul>
+        </div>
+
+        <div class="main-content">
+            <h1 id="page-title">Settings</h1>
+
+            <div class="widget">
+                <h2>Theme</h2>
+                <p class="settings-desc">Choose your preferred theme. Your choice is saved automatically.</p>
+                <div class="theme-options">
+                    <label class="theme-option">
+                        <input type="radio" name="theme" value="light" />
+                        <span class="theme-pill">☀️ Light</span>
+                    </label>
+                    <label class="theme-option">
+                        <input type="radio" name="theme" value="dark" />
+                        <span class="theme-pill">🌙 Dark</span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="widget">
+                <h2>Data</h2>
+                <p class="settings-desc">All tasks and lists are saved in your browser's local storage.</p>
+                <button id="clear-data-btn" class="btn-danger">Clear All Data</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="./assets/js/script.js"></script>
+</body>
+</html>
