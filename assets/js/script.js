@@ -402,21 +402,24 @@ function clearDeleted() {
 
 // ── Stats ─────────────────────────────────────
 function updateStats() {
-    const aEl = document.getElementById('stat-active');
-    const dEl = document.getElementById('stat-done');
-    if (!aEl || !dEl) return;
+    const activeTodos = todos.filter(t => !t.done && !t.deleted);
+    const doneTodos   = todos.filter(t => t.done && !t.deleted);
 
-    if (!activeListId) {
-        aEl.textContent = '— active';
-        dEl.textContent = '— done';
-        return;
-    }
+    // A list is "completed" if it has at least one task and all non-deleted tasks are done
+    const completedLists = lists.filter(l => {
+        const listTasks = todos.filter(t => t.listId === l.id && !t.deleted);
+        return listTasks.length > 0 && listTasks.every(t => t.done);
+    });
 
-    const relevant = todos.filter(t => t.listId === activeListId);
-    const active = relevant.filter(t => !t.done && !t.deleted).length;
-    const done   = relevant.filter(t => t.done && !t.deleted).length;
-    aEl.textContent = `${active} active`;
-    dEl.textContent = `${done} done`;
+    const listsEl      = document.getElementById('stat-lists');
+    const activeEl     = document.getElementById('stat-active');
+    const doneEl       = document.getElementById('stat-done');
+    const listsDoneEl  = document.getElementById('stat-lists-done');
+
+    if (listsEl)     listsEl.textContent     = lists.length;
+    if (activeEl)    activeEl.textContent     = activeTodos.length;
+    if (doneEl)      doneEl.textContent       = doneTodos.length;
+    if (listsDoneEl) listsDoneEl.textContent  = completedLists.length;
 }
 
 // ── Change log ────────────────────────────────
@@ -449,6 +452,27 @@ function escapeHtml(str) {
 
 // ── Wire up events ────────────────────────────
 document.addEventListener('DOMContentLoaded', function () {
+    // ── Mobile sidebar ──────────────────────────
+    const sidebar        = document.getElementById('sidebar');
+    const sidebarOpen    = document.getElementById('sidebar-open');
+    const sidebarToggle  = document.getElementById('sidebar-toggle');
+
+    // Create overlay element
+    const overlay = document.createElement('div');
+    overlay.className = 'sidebar-overlay';
+    document.body.appendChild(overlay);
+
+    function openSidebar()  { sidebar.classList.add('open');    overlay.classList.add('visible'); }
+    function closeSidebar() { sidebar.classList.remove('open'); overlay.classList.remove('visible'); }
+
+    if (sidebarOpen)   sidebarOpen.addEventListener('click', openSidebar);
+    if (sidebarToggle) sidebarToggle.addEventListener('click', closeSidebar);
+    overlay.addEventListener('click', closeSidebar);
+
+    // Close sidebar when a nav link is tapped on mobile
+    document.querySelectorAll('[data-view]').forEach(link => {
+        link.addEventListener('click', () => { if (window.innerWidth <= 640) closeSidebar(); });
+    });
     // Theme — apply on every page load
     loadTheme();
 
