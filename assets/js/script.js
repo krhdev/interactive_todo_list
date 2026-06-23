@@ -527,3 +527,23 @@ document.addEventListener('DOMContentLoaded', function () {
 
     render();
 });
+
+// Mobile sidebar toggle (matches index.htm behaviour)
+document.addEventListener('DOMContentLoaded', function () {
+    const sidebar       = document.getElementById('sidebar');
+    const sidebarOpen   = document.getElementById('sidebar-open');
+    const sidebarToggle = document.getElementById('sidebar-toggle');
+
+    const overlay = document.createElement('div');
+    overlay.className = 'sidebar-overlay';
+    document.body.appendChild(overlay);
+
+    function openSidebar()  { sidebar.classList.add('open');    overlay.classList.add('visible'); }
+    function closeSidebar() { sidebar.classList.remove('open'); overlay.classList.remove('visible'); }
+
+    if (sidebarOpen)   sidebarOpen.addEventListener('click', openSidebar);
+    if (sidebarToggle) sidebarToggle.addEventListener('click', closeSidebar);
+        overlay.addEventListener('click', closeSidebar);
+
+        loadTheme();
+});

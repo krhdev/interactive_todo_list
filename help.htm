@@ -1,0 +1,226 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Help — KRHDev's To Do List</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./assets/css/style.css">
+    <style>
+        .help-section { margin-bottom: 12px; }
+
+        .help-section summary {
+            cursor: pointer;
+            padding: 12px 16px;
+            background: var(--surface-2);
+            border-radius: 6px;
+            font-weight: 500;
+            font-size: 0.95rem;
+            color: var(--brand);
+            list-style: none;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            user-select: none;
+            border: 1px solid var(--border);
+            transition: background 0.15s;
+        }
+
+        .help-section summary::-webkit-details-marker { display: none; }
+
+        .help-section summary::after {
+            content: '▸';
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            transition: transform 0.2s;
+        }
+
+        .help-section[open] summary::after { transform: rotate(90deg); }
+
+        .help-section summary:hover { background: var(--border); }
+
+        .help-body {
+            padding: 16px 18px;
+            border: 1px solid var(--border);
+            border-top: none;
+            border-radius: 0 0 6px 6px;
+            font-size: 0.9rem;
+            line-height: 1.7;
+            color: var(--text);
+        }
+
+        .help-body p { margin-bottom: 10px; }
+        .help-body p:last-child { margin-bottom: 0; }
+
+        .help-body ul {
+            padding-left: 18px;
+            margin-bottom: 10px;
+        }
+
+        .help-body ul li { margin-bottom: 6px; }
+
+        .tip {
+            background: rgba(81, 0, 97, 0.08);
+            border-left: 3px solid var(--brand);
+            padding: 10px 14px;
+            border-radius: 0 6px 6px 0;
+            margin-top: 10px;
+            font-size: 0.875rem;
+            color: var(--text);
+        }
+
+        [data-theme="dark"] .tip {
+            background: rgba(81, 0, 97, 0.25);
+        }
+
+        .tip strong { color: var(--brand); }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h2>KRHDev's To Do List App</h2>
+                <button class="hamburger" id="sidebar-toggle" aria-label="Close menu">✕</button>
+            </div>
+            <ul>
+                <li><a href="index.htm" data-view="home">Home</a></li>
+                <li><a href="index.htm" data-view="all">View Lists</a></li>
+                <li><a href="index.htm" data-view="completed">View Completed</a></li>
+                <li><a href="index.htm" data-view="deleted">View Deleted</a></li>
+                <li><a href="index.htm" data-view="log">Recent Changes</a></li>
+                <li><a href="settings.htm">Settings</a></li>
+                <li><a href="help.htm" class="active">Help</a></li>
+            </ul>
+        </div>
+
+        <div class="main-content">
+            <div class="mobile-topbar">
+                <button class="hamburger" id="sidebar-open" aria-label="Open menu">☰</button>
+                <span class="mobile-title">Help</span>
+            </div>
+
+            <h1>Help &amp; Guide</h1>
+
+            <div class="widget">
+
+                <!-- 1 -->
+                <details class="help-section" open>
+                    <summary>Where is my data saved?</summary>
+                    <div class="help-body">
+                        <p>Your lists and tasks are saved <strong>on this device only</strong>, inside your browser. Nothing is sent to a server or stored online.</p>
+                        <p>This means:</p>
+                        <ul>
+                            <li>Your data on your phone is separate from your data on your laptop.</li>
+                            <li>If you open the app in a different browser on the same device, your lists won't be there.</li>
+                            <li>If you clear your browser's site data or cache, your lists will be gone.</li>
+                        </ul>
+                        <div class="tip"><strong>Tip:</strong> Export your lists regularly as a backup, especially before clearing your browser or switching devices.</div>
+                    </div>
+                </details>
+
+                <!-- 2 -->
+                <details class="help-section">
+                    <summary>How do I use lists?</summary>
+                    <div class="help-body">
+                        <p>Lists let you group tasks together — for example, Work, Shopping, or a project name.</p>
+                        <ul>
+                            <li>Type a name in the <strong>New List</strong> box and press Create List or hit Enter.</li>
+                            <li>Click any list tab to switch to it and see its tasks.</li>
+                            <li>Tasks belong to the list they were added to — switching lists shows only that list's tasks.</li>
+                            <li>To remove a list, click the <strong>✕</strong> on its tab. This deletes the list and all its tasks permanently.</li>
+                        </ul>
+                    </div>
+                </details>
+
+                <!-- 3 -->
+                <details class="help-section">
+                    <summary>How do I manage tasks?</summary>
+                    <div class="help-body">
+                        <ul>
+                            <li><strong>Add a task:</strong> Select a list, type in the Add a Task box, and press Add Task or Enter.</li>
+                            <li><strong>Complete a task:</strong> Tick the checkbox. It moves to Completed Tasks.</li>
+                            <li><strong>Reopen a task:</strong> In Completed Tasks, untick the checkbox to move it back to active.</li>
+                            <li><strong>Edit a task:</strong> Click Edit, make your change, then Save (or press Enter). Press Cancel or Escape to discard.</li>
+                            <li><strong>Delete a task:</strong> Click Delete. It moves to Deleted Tasks — it's not gone yet.</li>
+                            <li><strong>Restore a task:</strong> In Deleted Tasks, click Restore to bring it back to active.</li>
+                            <li><strong>Permanently remove deleted tasks:</strong> In Deleted Tasks, use the Clear Deleted button. This cannot be undone.</li>
+                        </ul>
+                    </div>
+                </details>
+
+                <!-- 4 -->
+                <details class="help-section">
+                    <summary>How do I back up my lists? (Export)</summary>
+                    <div class="help-body">
+                        <p>Exporting saves all your lists and tasks into a single file on your device that you can keep as a backup or move to another device.</p>
+                        <ul>
+                            <li>In the sidebar, click <strong>⬇ Export Lists</strong>.</li>
+                            <li>A file named something like <code>krhdev-todo-backup-2026-06-22.json</code> will download automatically.</li>
+                            <li>Save it somewhere safe — your Downloads folder, Google Drive, email it to yourself, or copy it to another device.</li>
+                        </ul>
+                        <div class="tip"><strong>Tip:</strong> Get into the habit of exporting once a week, or any time you've done a lot of work in the app.</div>
+                    </div>
+                </details>
+
+                <!-- 5 -->
+                <details class="help-section">
+                    <summary>How do I restore or move my lists? (Import)</summary>
+                    <div class="help-body">
+                        <p>Importing reads a backup file and loads your lists back into the app. You'd use this after clearing your browser, switching to a new device, or restoring from a backup.</p>
+                        <ul>
+                            <li>In the sidebar, click <strong>⬆ Import Lists</strong> and pick your backup file.</li>
+                            <li>You'll be asked to choose between two options:</li>
+                        </ul>
+                        <ul>
+                            <li><strong>Merge</strong> — adds the lists from the backup file alongside any lists already on this device. Use this when moving to a new device that already has some lists, or when combining two sets of data.</li>
+                            <li><strong>Replace</strong> — wipes everything currently in the app and restores exactly what's in the backup file. Use this when restoring a backup from scratch.</li>
+                        </ul>
+                        <div class="tip"><strong>Tip:</strong> If you're unsure which to pick, choose Merge — it's the safer option as it won't delete anything you already have.</div>
+                    </div>
+                </details>
+
+                <!-- 6 -->
+                <details class="help-section">
+                    <summary>How do I use this on my phone or install it?</summary>
+                    <div class="help-body">
+                        <p>The app works in any mobile browser without installing anything. For a better experience, you can add it to your home screen so it opens like a normal app:</p>
+                        <ul>
+                            <li><strong>Android (Chrome):</strong> Tap the three-dot menu and choose Add to Home Screen, or look for an install icon in the address bar.</li>
+                            <li><strong>iPhone (Safari):</strong> Tap the Share button (the box with an arrow), then Add to Home Screen.</li>
+                            <li><strong>Desktop (Chrome or Edge):</strong> Look for an install icon at the right end of the address bar.</li>
+                        </ul>
+                        <p>Once installed, the app opens in its own window without the browser around it, and works offline.</p>
+                        <div class="tip"><strong>Note:</strong> Installing the app on your phone does not sync data with any other device. Your lists are still stored on that device only.</div>
+                    </div>
+                </details>
+
+                <!-- 7 -->
+                <details class="help-section">
+                    <summary>Light and dark mode</summary>
+                    <div class="help-body">
+                        <p>You can switch between light and dark mode in <a href="settings.htm">Settings</a>. Your choice is saved and will be remembered next time you open the app.</p>
+                    </div>
+                </details>
+
+                <!-- 8 -->
+                <details class="help-section">
+                    <summary>How do I clear all my data?</summary>
+                    <div class="help-body">
+                        <p>Go to <a href="settings.htm">Settings</a> and use the <strong>Clear All Data</strong> button. This permanently deletes all lists, tasks, and history from this device.</p>
+                        <div class="tip"><strong>Tip:</strong> Export your lists before clearing data if you want to keep them.</div>
+                    </div>
+                </details>
+
+            </div>
+        </div>
+    </div>
+
+    <script src="./assets/js/script.js"></script>
+    <script src="./assets/js/json-io.js"></script>
+</body>
+</html>
