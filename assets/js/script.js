@@ -2,6 +2,7 @@
 //  KRHDev Todo App  –  script.js
 //  CRUD: Create · Read · Update · Delete
 //  Features: Named lists · Light/Dark mode - mobile friendly · Change log · Local storage
+//  Validation: Empty input blocked · Warnings shown · Duplicate prevention
 // ─────────────────────────────────────────────
 
 // ── Theme ────────────────────────────────────
@@ -13,7 +14,6 @@ function applyTheme(theme) {
 function loadTheme() {
     const saved = localStorage.getItem('krhdev-theme') || 'light';
     applyTheme(saved);
-    // Sync radio buttons on settings page
     const radios = document.querySelectorAll('input[name="theme"]');
     radios.forEach(r => { r.checked = (r.value === saved); });
 }
@@ -38,6 +38,52 @@ function save() {
     localStorage.setItem('krhdev-todos', JSON.stringify(todos));
 }
 
+// ── Validation helpers ────────────────────────
+// Shows an inline warning message below an input, auto-clears after 3 s.
+// Each input gets at most one warning at a time.
+const _warnTimers = {};
+
+function showWarning(inputEl, message) {
+    const id = inputEl.id || inputEl.name || 'field';
+
+    // Remove any existing warning for this input
+    clearWarning(inputEl);
+
+    const warn = document.createElement('p');
+    warn.className = 'input-warning';
+    warn.setAttribute('role', 'alert');
+    warn.textContent = message;
+    warn.id = `warn-${id}`;
+
+    // Mark the input as invalid for styling
+    inputEl.classList.add('input-invalid');
+    inputEl.setAttribute('aria-describedby', warn.id);
+
+    inputEl.insertAdjacentElement('afterend', warn);
+
+    // Shake the input briefly
+    inputEl.classList.add('input-shake');
+    inputEl.addEventListener('animationend', () => inputEl.classList.remove('input-shake'), { once: true });
+
+    // Auto-dismiss after 3 s
+    if (_warnTimers[id]) clearTimeout(_warnTimers[id]);
+    _warnTimers[id] = setTimeout(() => clearWarning(inputEl), 3000);
+}
+
+function clearWarning(inputEl) {
+    const id = inputEl.id || inputEl.name || 'field';
+    const existing = document.getElementById(`warn-${id}`);
+    if (existing) existing.remove();
+    inputEl.classList.remove('input-invalid');
+    inputEl.removeAttribute('aria-describedby');
+    if (_warnTimers[id]) { clearTimeout(_warnTimers[id]); delete _warnTimers[id]; }
+}
+
+// Normalise text for duplicate comparison (case-insensitive, collapsed whitespace)
+function normalise(str) {
+    return str.trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
 // ── Logging ──────────────────────────────────
 const MAX_LOG = 10;
 
@@ -54,8 +100,27 @@ function addList() {
     const input = document.getElementById('new-list');
     if (!input) return;
     const name = input.value.trim();
-    if (!name) return;
 
+    // ── Validation ──
+    if (!name) {
+        showWarning(input, 'Please enter a list name.');
+        input.focus();
+        return;
+    }
+    if (name.length > 60) {
+        showWarning(input, 'List name must be 60 characters or fewer.');
+        input.focus();
+        return;
+    }
+    const duplicate = lists.find(l => normalise(l.name) === normalise(name));
+    if (duplicate) {
+        showWarning(input, `A list called "${duplicate.name}" already exists.`);
+        input.focus();
+        return;
+    }
+    // ── End validation ──
+
+    clearWarning(input);
     const list = { id: nextListId++, name };
     lists.push(list);
     activeListId = list.id;
@@ -88,8 +153,28 @@ function addTodo() {
     const input = document.getElementById('new-todo');
     if (!input) return;
     const text = input.value.trim();
-    if (!text) return;
 
+    // ── Validation ──
+    if (!text) {
+        showWarning(input, 'Please enter a task.');
+        input.focus();
+        return;
+    }
+    if (text.length > 200) {
+        showWarning(input, 'Task must be 200 characters or fewer.');
+        input.focus();
+        return;
+    }
+    const activeTasks = todos.filter(t => t.listId === activeListId && !t.deleted);
+    const duplicate = activeTasks.find(t => normalise(t.text) === normalise(text));
+    if (duplicate) {
+        showWarning(input, 'That task already exists in this list.');
+        input.focus();
+        return;
+    }
+    // ── End validation ──
+
+    clearWarning(input);
     const todo = { id: nextTodoId++, listId: activeListId, text, done: false, deleted: false, editing: false };
     todos.push(todo);
     save();
@@ -112,11 +197,9 @@ function render() {
         localStorage.setItem('krhdev-active-list', activeListId);
     }
 
-    // Update page title
     const titleEl = document.getElementById('page-title');
     if (titleEl) titleEl.textContent = viewTitles[activeView] || 'My To-Do Lists';
 
-    // Highlight active sidebar link
     document.querySelectorAll('[data-view]').forEach(link => {
         link.classList.toggle('active', link.dataset.view === activeView);
     });
@@ -128,7 +211,7 @@ function render() {
 }
 
 function renderListTabs() {
-    const tabsEl   = document.getElementById('list-tabs');
+    const tabsEl         = document.getElementById('list-tabs');
     const selectorWidget = document.getElementById('widget-list-selector');
     if (!tabsEl || !selectorWidget) return;
 
@@ -153,7 +236,7 @@ function renderListTabs() {
         delBtn.textContent = '✕';
         delBtn.title = 'Delete this list';
         delBtn.addEventListener('click', e => {
-            e.stopPropagation(); // don't also select the tab
+            e.stopPropagation();
             deleteList(list.id);
         });
         btn.appendChild(delBtn);
@@ -178,9 +261,6 @@ function renderTaskWidgets() {
 
     const hasList = activeListId !== null;
 
-    // home: only New List + Your Lists tabs visible — no task widgets
-    // all:  Add Task + Active Tasks visible (if a list is selected)
-    // completed/deleted/log: only their widget visible
     if (addWidget)       addWidget.style.display       = (hasList && activeView === 'all')       ? 'block' : 'none';
     if (allWidget)       allWidget.style.display       = (hasList && activeView === 'all')       ? 'block' : 'none';
     if (completedWidget) completedWidget.style.display = (hasList && activeView === 'completed') ? 'block' : 'none';
@@ -189,7 +269,6 @@ function renderTaskWidgets() {
 
     if (!hasList) return;
 
-    // Update the "in: List Name" label
     const activeList = lists.find(l => l.id === activeListId);
     if (label && activeList) label.textContent = `— ${activeList.name}`;
 
@@ -354,9 +433,43 @@ function startEdit(id) {
 
 function saveEdit(id, newText) {
     const text = newText.trim();
-    if (!text) return;
     const todo = todos.find(t => t.id === id);
     if (!todo) return;
+
+    // ── Validation ──
+    if (!text) {
+        // Find the live edit input inside the task item and warn on it
+        const li = document.querySelector(`.task-item[data-id="${id}"]`);
+        const editInput = li ? li.querySelector('.edit-input') : null;
+        if (editInput) {
+            showWarning(editInput, 'Task cannot be empty.');
+            editInput.focus();
+        }
+        return;
+    }
+    if (text.length > 200) {
+        const li = document.querySelector(`.task-item[data-id="${id}"]`);
+        const editInput = li ? li.querySelector('.edit-input') : null;
+        if (editInput) {
+            showWarning(editInput, 'Task must be 200 characters or fewer.');
+            editInput.focus();
+        }
+        return;
+    }
+    // Duplicate check — exclude the task being edited from the comparison
+    const activeTasks = todos.filter(t => t.listId === todo.listId && !t.deleted && t.id !== id);
+    const duplicate = activeTasks.find(t => normalise(t.text) === normalise(text));
+    if (duplicate) {
+        const li = document.querySelector(`.task-item[data-id="${id}"]`);
+        const editInput = li ? li.querySelector('.edit-input') : null;
+        if (editInput) {
+            showWarning(editInput, 'Another task with that name already exists.');
+            editInput.focus();
+        }
+        return;
+    }
+    // ── End validation ──
+
     const old = todo.text;
     todo.text = text;
     todo.editing = false;
@@ -405,21 +518,20 @@ function updateStats() {
     const activeTodos = todos.filter(t => !t.done && !t.deleted);
     const doneTodos   = todos.filter(t => t.done && !t.deleted);
 
-    // A list is "completed" if it has at least one task and all non-deleted tasks are done
     const completedLists = lists.filter(l => {
         const listTasks = todos.filter(t => t.listId === l.id && !t.deleted);
         return listTasks.length > 0 && listTasks.every(t => t.done);
     });
 
-    const listsEl      = document.getElementById('stat-lists');
-    const activeEl     = document.getElementById('stat-active');
-    const doneEl       = document.getElementById('stat-done');
-    const listsDoneEl  = document.getElementById('stat-lists-done');
+    const listsEl     = document.getElementById('stat-lists');
+    const activeEl    = document.getElementById('stat-active');
+    const doneEl      = document.getElementById('stat-done');
+    const listsDoneEl = document.getElementById('stat-lists-done');
 
-    if (listsEl)     listsEl.textContent     = lists.length;
-    if (activeEl)    activeEl.textContent     = activeTodos.length;
-    if (doneEl)      doneEl.textContent       = doneTodos.length;
-    if (listsDoneEl) listsDoneEl.textContent  = completedLists.length;
+    if (listsEl)     listsEl.textContent    = lists.length;
+    if (activeEl)    activeEl.textContent   = activeTodos.length;
+    if (doneEl)      doneEl.textContent     = doneTodos.length;
+    if (listsDoneEl) listsDoneEl.textContent = completedLists.length;
 }
 
 // ── Change log ────────────────────────────────
@@ -453,83 +565,6 @@ function escapeHtml(str) {
 // ── Wire up events ────────────────────────────
 document.addEventListener('DOMContentLoaded', function () {
     // ── Mobile sidebar ──────────────────────────
-    const sidebar        = document.getElementById('sidebar');
-    const sidebarOpen    = document.getElementById('sidebar-open');
-    const sidebarToggle  = document.getElementById('sidebar-toggle');
-
-    // Create overlay element
-    const overlay = document.createElement('div');
-    overlay.className = 'sidebar-overlay';
-    document.body.appendChild(overlay);
-
-    function openSidebar()  { sidebar.classList.add('open');    overlay.classList.add('visible'); }
-    function closeSidebar() { sidebar.classList.remove('open'); overlay.classList.remove('visible'); }
-
-    if (sidebarOpen)   sidebarOpen.addEventListener('click', openSidebar);
-    if (sidebarToggle) sidebarToggle.addEventListener('click', closeSidebar);
-    overlay.addEventListener('click', closeSidebar);
-
-    // Close sidebar when a nav link is tapped on mobile
-    document.querySelectorAll('[data-view]').forEach(link => {
-        link.addEventListener('click', () => { if (window.innerWidth <= 640) closeSidebar(); });
-    });
-    // Theme — apply on every page load
-    loadTheme();
-
-    // Theme radio buttons (settings page)
-    const radios = document.querySelectorAll('input[name="theme"]');
-    radios.forEach(r => {
-        r.addEventListener('change', () => applyTheme(r.value));
-    });
-
-    // Settings: clear all data
-    const clearDataBtn = document.getElementById('clear-data-btn');
-    if (clearDataBtn) {
-        clearDataBtn.addEventListener('click', () => {
-            if (confirm('This will permanently delete all your lists, tasks, and history. Are you sure?')) {
-                ['krhdev-lists', 'krhdev-todos', 'krhdev-log'].forEach(k => localStorage.removeItem(k));
-                lists = []; todos = []; nextListId = 1; nextTodoId = 1; activeListId = null;
-                alert('All data cleared.');
-                render();
-            }
-        });
-    }
-
-    // Sidebar nav links
-    const navLinks = document.querySelectorAll('[data-view]');
-    navLinks.forEach(link => {
-        link.addEventListener('click', e => {
-            e.preventDefault();
-            activeView = link.dataset.view;
-            render();
-        });
-    });
-
-    // Index page buttons
-    const addListBtn      = document.getElementById('add-list-btn');
-    const newListInput    = document.getElementById('new-list');
-    const addBtn          = document.getElementById('add-btn');
-    const newTodoInput    = document.getElementById('new-todo');
-    const clearDeletedBtn = document.getElementById('clear-deleted-btn');
-
-    if (addListBtn)       addListBtn.addEventListener('click', addList);
-    if (newListInput)     newListInput.addEventListener('keydown', e => { if (e.key === 'Enter') addList(); });
-    if (addBtn)           addBtn.addEventListener('click', addTodo);
-    if (newTodoInput)     newTodoInput.addEventListener('keydown', e => { if (e.key === 'Enter') addTodo(); });
-    if (clearDeletedBtn)  clearDeletedBtn.addEventListener('click', clearDeleted);
-
-    // Restore last active list (but stay on home view until user navigates)
-    if (lists.length > 0) {
-        const lastActive = localStorage.getItem('krhdev-active-list');
-        const found = lastActive && lists.find(l => l.id === parseInt(lastActive));
-        activeListId = found ? found.id : lists[0].id;
-    }
-
-    render();
-});
-
-// Mobile sidebar toggle (matches index.htm behaviour)
-document.addEventListener('DOMContentLoaded', function () {
     const sidebar       = document.getElementById('sidebar');
     const sidebarOpen   = document.getElementById('sidebar-open');
     const sidebarToggle = document.getElementById('sidebar-toggle');
@@ -543,7 +578,62 @@ document.addEventListener('DOMContentLoaded', function () {
 
     if (sidebarOpen)   sidebarOpen.addEventListener('click', openSidebar);
     if (sidebarToggle) sidebarToggle.addEventListener('click', closeSidebar);
-        overlay.addEventListener('click', closeSidebar);
+    overlay.addEventListener('click', closeSidebar);
 
-        loadTheme();
+    document.querySelectorAll('[data-view]').forEach(link => {
+        link.addEventListener('click', () => { if (window.innerWidth <= 640) closeSidebar(); });
+    });
+
+    loadTheme();
+
+    const radios = document.querySelectorAll('input[name="theme"]');
+    radios.forEach(r => {
+        r.addEventListener('change', () => applyTheme(r.value));
+    });
+
+    const clearDataBtn = document.getElementById('clear-data-btn');
+    if (clearDataBtn) {
+        clearDataBtn.addEventListener('click', () => {
+            if (confirm('This will permanently delete all your lists, tasks, and history. Are you sure?')) {
+                ['krhdev-lists', 'krhdev-todos', 'krhdev-log'].forEach(k => localStorage.removeItem(k));
+                lists = []; todos = []; nextListId = 1; nextTodoId = 1; activeListId = null;
+                alert('All data cleared.');
+                render();
+            }
+        });
+    }
+
+    const navLinks = document.querySelectorAll('[data-view]');
+    navLinks.forEach(link => {
+        link.addEventListener('click', e => {
+            e.preventDefault();
+            activeView = link.dataset.view;
+            render();
+        });
+    });
+
+    const addListBtn      = document.getElementById('add-list-btn');
+    const newListInput    = document.getElementById('new-list');
+    const addBtn          = document.getElementById('add-btn');
+    const newTodoInput    = document.getElementById('new-todo');
+    const clearDeletedBtn = document.getElementById('clear-deleted-btn');
+
+    if (addListBtn)      addListBtn.addEventListener('click', addList);
+    if (newListInput)    newListInput.addEventListener('keydown', e => { if (e.key === 'Enter') addList(); });
+    if (addBtn)          addBtn.addEventListener('click', addTodo);
+    if (newTodoInput)    newTodoInput.addEventListener('keydown', e => { if (e.key === 'Enter') addTodo(); });
+    if (clearDeletedBtn) clearDeletedBtn.addEventListener('click', clearDeleted);
+
+    // Clear any stale warnings when the user starts typing again
+    [newListInput, newTodoInput].forEach(input => {
+        if (input) input.addEventListener('input', () => clearWarning(input));
+    });
+
+    if (lists.length > 0) {
+        const lastActive = localStorage.getItem('krhdev-active-list');
+        const found = lastActive && lists.find(l => l.id === parseInt(lastActive));
+        activeListId = found ? found.id : lists[0].id;
+    }
+
+    render();
 });
