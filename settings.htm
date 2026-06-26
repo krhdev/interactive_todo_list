@@ -1,24 +1,33 @@
-
 <!DOCTYPE html>
 <html lang="en">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KRHDev's To Do List – Settings</title>
+    <meta name="theme-color" content="#510061">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="To Do List">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="apple-touch-icon" href="/assets/images/todo-icon-192x192.png">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="./assets/css/style.css">
+
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js');
+        });
+      }
+    </script>
 </head>
 
 <body>
 
     <div class="container">
         <div class="sidebar">
-            <div class="sidebar-header">
-                <img src="./assets/images/todo-icon-192x192.png" alt="KRHDev To Do List icon">
-                <h2 id="sidebar-title" data-suffix="app">KRHDev's To Do List</h2>
-                <button class="hamburger" id="sidebar-toggle" aria-label="Close menu">✕</button>
-            </div>
+            <h2 id="sidebar-title">KRHDev's To Do List</h2>
             <ul>
                 <li><a href="index.htm">View Lists</a></li>
                 <li><a href="index.htm">View Completed</a></li>
@@ -69,6 +78,6 @@
     </div>
 
     <script src="./assets/js/script.js"></script>
-    <script src="/assets/js/pwa-install.js"></script>
+    <script src="./assets/js/pwa-install.js"></script>
 </body>
 </html>
