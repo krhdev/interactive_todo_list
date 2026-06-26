@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 
@@ -13,7 +14,11 @@
 
     <div class="container">
         <div class="sidebar">
-            <h2>KRHDev's To Do List</h2>
+            <div class="sidebar-header">
+                <img src="./assets/images/todo-icon-192x192.png" alt="KRHDev To Do List icon">
+                <h2 id="sidebar-title" data-suffix="app">KRHDev's To Do List</h2>
+                <button class="hamburger" id="sidebar-toggle" aria-label="Close menu">✕</button>
+            </div>
             <ul>
                 <li><a href="index.htm">View Lists</a></li>
                 <li><a href="index.htm">View Completed</a></li>
@@ -26,6 +31,19 @@
         <div class="main-content">
             <h1 id="page-title">Settings</h1>
 
+            <!-- PERSONALISATION -->
+            <div class="widget">
+                <h2>Personalisation</h2>
+                <p class="settings-desc">Set your name to personalise the app title. Leave blank to use the default.</p>
+                <div class="add-form">
+                    <input type="text" id="user-name-input" placeholder="Enter your name" maxlength="30" autocomplete="off" />
+                    <button id="save-name-btn">Save</button>
+                </div>
+                <p class="settings-hint" id="name-saved-msg" style="display:none;">✓ Name saved!</p>
+                <button id="clear-name-btn" class="btn-secondary" style="margin-top:8px;">Reset to Default</button>
+            </div>
+
+            <!-- THEME -->
             <div class="widget">
                 <h2>Theme</h2>
                 <p class="settings-desc">Choose your preferred theme. Your choice is saved automatically.</p>
@@ -41,6 +59,7 @@
                 </div>
             </div>
 
+            <!-- DATA -->
             <div class="widget">
                 <h2>Data</h2>
                 <p class="settings-desc">All tasks and lists are saved in your browser's local storage.</p>

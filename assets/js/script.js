@@ -16,6 +16,36 @@ function loadTheme() {
     applyTheme(saved);
     const radios = document.querySelectorAll('input[name="theme"]');
     radios.forEach(r => { r.checked = (r.value === saved); });
+    // Apply personalised name on every page
+    applyUserName();
+}
+
+// ── User name ────────────────────────────────
+const NAME_KEY     = 'krhdev-user-name';
+const DEFAULT_NAME = 'KRHDev';
+const TITLE_SUFFIX = "'s To Do List";
+
+function getUserName() {
+    return localStorage.getItem(NAME_KEY) || DEFAULT_NAME;
+}
+
+function applyUserName() {
+    const name  = getUserName();
+
+    const sidebarTitle = document.getElementById('sidebar-title');
+    const mobileTitle  = document.getElementById('mobile-title');
+
+    if (sidebarTitle) {
+        // Sidebar on index has "App" suffix, settings does not
+        const hasApp = sidebarTitle.dataset.suffix === 'app';
+        sidebarTitle.textContent = name + TITLE_SUFFIX + (hasApp ? ' App' : '');
+    }
+    if (mobileTitle) mobileTitle.textContent = name + TITLE_SUFFIX;
+
+    // Keep browser tab in sync on pages that include the name
+    if (document.title.includes('To Do List')) {
+        document.title = document.title.replace(/^[^']+(?='s To Do)/, name);
+    }
 }
 
 // ── Data store ───────────────────────────────
@@ -629,6 +659,57 @@ document.addEventListener('DOMContentLoaded', function () {
         if (input) input.addEventListener('input', () => clearWarning(input));
     });
 
+    // ── Personalisation (settings page) ────────
+    const userNameInput  = document.getElementById('user-name-input');
+    const saveNameBtn    = document.getElementById('save-name-btn');
+    const clearNameBtn   = document.getElementById('clear-name-btn');
+    const nameSavedMsg   = document.getElementById('name-saved-msg');
+
+    if (userNameInput) {
+        // Pre-fill with current saved name (but not the default)
+        const current = localStorage.getItem(NAME_KEY);
+        if (current) userNameInput.value = current;
+
+        const showSaved = () => {
+            if (!nameSavedMsg) return;
+            nameSavedMsg.style.display = 'block';
+            setTimeout(() => { nameSavedMsg.style.display = 'none'; }, 2500);
+        };
+
+        const saveName = () => {
+            const raw  = userNameInput.value.trim();
+            const name = raw.replace(/[<>"]/g, ''); // basic sanitise
+            if (!name) {
+                showWarning(userNameInput, 'Please enter a name, or use Reset to Default.');
+                return;
+            }
+            clearWarning(userNameInput);
+            localStorage.setItem(NAME_KEY, name);
+            applyUserName();
+            showSaved();
+        };
+
+        saveNameBtn.addEventListener('click', saveName);
+        userNameInput.addEventListener('keydown', e => { if (e.key === 'Enter') saveName(); });
+        userNameInput.addEventListener('input', () => clearWarning(userNameInput));
+    }
+
+    if (clearNameBtn) {
+        clearNameBtn.addEventListener('click', () => {
+            localStorage.removeItem(NAME_KEY);
+            if (userNameInput) userNameInput.value = '';
+            applyUserName();
+            if (nameSavedMsg) {
+                nameSavedMsg.textContent = '✓ Reset to default.';
+                nameSavedMsg.style.display = 'block';
+                setTimeout(() => {
+                    nameSavedMsg.style.display = 'none';
+                    nameSavedMsg.textContent = '✓ Name saved!';
+                }, 2500);
+            }
+        });
+    }
+
     if (lists.length > 0) {
         const lastActive = localStorage.getItem('krhdev-active-list');
         const found = lastActive && lists.find(l => l.id === parseInt(lastActive));
@@ -637,3 +718,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
     render();
 });
+
+if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js');
+        });
+    }

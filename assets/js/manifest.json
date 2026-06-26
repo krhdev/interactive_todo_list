@@ -1,0 +1,24 @@
+{
+  "name": "KRHDev's To Do List",
+  "short_name": "To Do List",
+  "description": "A personal to-do list app built with HTML, CSS and JavaScript.",
+  "start_url": "/index.htm",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#510061",
+  "theme_color": "#510061",
+  "icons": [
+    {
+      "src": "/assets/images/todo-icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/assets/images/todo-icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
