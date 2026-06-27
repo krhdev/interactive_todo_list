@@ -47,6 +47,20 @@
     --tab-color:      #c0c0d0;
     --tab-active-bg:  #510061;
     --tab-active-color: #fff;
+    --brand-readable: #c97fdc;
+}
+
+/* ── Dark mode contrast fixes ── */
+[data-theme="dark"] .widget h2 {
+    color: var(--brand-readable);
+}
+
+[data-theme="dark"] a {
+    color: var(--brand-readable);
+}
+
+[data-theme="dark"] a:hover {
+    color: #e0b0f0;
 }
 
 /* ── Base ── */
@@ -607,71 +621,3 @@ body, html {
 [data-theme="dark"] .settings-hint {
     color: #c97fdc;
 }
-
-        .help-section { margin-bottom: 12px; }
-
-        .help-section summary {
-            cursor: pointer;
-            padding: 12px 16px;
-            background: var(--surface-2);
-            border-radius: 6px;
-            font-weight: 500;
-            font-size: 0.95rem;
-            color: var(--brand);
-            list-style: none;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            user-select: none;
-            border: 1px solid var(--border);
-            transition: background 0.15s;
-        }
-
-        .help-section summary::-webkit-details-marker { display: none; }
-
-        .help-section summary::after {
-            content: '▸';
-            font-size: 0.8rem;
-            color: var(--text-muted);
-            transition: transform 0.2s;
-        }
-
-        .help-section[open] summary::after { transform: rotate(90deg); }
-
-        .help-section summary:hover { background: var(--border); }
-
-        .help-body {
-            padding: 16px 18px;
-            border: 1px solid var(--border);
-            border-top: none;
-            border-radius: 0 0 6px 6px;
-            font-size: 0.9rem;
-            line-height: 1.7;
-            color: var(--text);
-        }
-
-        .help-body p { margin-bottom: 10px; }
-        .help-body p:last-child { margin-bottom: 0; }
-
-        .help-body ul {
-            padding-left: 18px;
-            margin-bottom: 10px;
-        }
-
-        .help-body ul li { margin-bottom: 6px; }
-
-        .tip {
-            background: rgba(81, 0, 97, 0.08);
-            border-left: 3px solid var(--brand);
-            padding: 10px 14px;
-            border-radius: 0 6px 6px 0;
-            margin-top: 10px;
-            font-size: 0.875rem;
-            color: var(--text);
-        }
-
-        [data-theme="dark"] .tip {
-            background: rgba(81, 0, 97, 0.25);
-        }
-
-        .tip strong { color: var(--brand); }
