@@ -862,3 +862,27 @@ body, html {
 .list-tab.active .list-category-badge {
     background: rgba(255,255,255,0.25);
 }
+
+/* ── Mobile form layout fix ── */
+@media (max-width: 640px) {
+    .add-form {
+        flex-wrap: wrap;
+    }
+
+    .add-form input {
+        min-width: 0;
+        flex: 1 1 100%;
+    }
+
+    .add-form .category-select {
+        flex: 1 1 auto;
+    }
+
+    #add-list-btn,
+    #add-btn,
+    #save-name-btn,
+    #auth-submit-btn {
+        flex: 1 1 auto;
+        width: 100%;
+    }
+}
