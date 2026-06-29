@@ -1,9 +1,14 @@
 // ─────────────────────────────────────────────
 //  KRHDev Todo App  –  script.js
 //  CRUD: Create · Read · Update · Delete
-//  Features: Named lists · Light/Dark mode - mobile friendly · Change log · Local storage
+//  Features: Named lists · Light/Dark mode · Mobile friendly
+//             Change log · Local storage · Supabase cloud sync
 //  Validation: Empty input blocked · Warnings shown · Duplicate prevention
 // ─────────────────────────────────────────────
+
+// ── Auth state ───────────────────────────────
+let currentUser = null;
+let useCloud    = false;
 
 // ── Theme ────────────────────────────────────
 function applyTheme(theme) {
@@ -16,7 +21,6 @@ function loadTheme() {
     applyTheme(saved);
     const radios = document.querySelectorAll('input[name="theme"]');
     radios.forEach(r => { r.checked = (r.value === saved); });
-    // Apply personalised name on every page
     applyUserName();
 }
 
@@ -30,72 +34,64 @@ function getUserName() {
 }
 
 function applyUserName() {
-    const name  = getUserName();
-
+    const name = getUserName();
     const sidebarTitle = document.getElementById('sidebar-title');
     const mobileTitle  = document.getElementById('mobile-title');
-
     if (sidebarTitle) {
-        // Sidebar on index has "App" suffix, settings does not
         const hasApp = sidebarTitle.dataset.suffix === 'app';
         sidebarTitle.textContent = name + TITLE_SUFFIX + (hasApp ? ' App' : '');
     }
     if (mobileTitle) mobileTitle.textContent = name + TITLE_SUFFIX;
-
-    // Keep browser tab in sync on pages that include the name
     if (document.title.includes('To Do List')) {
         document.title = document.title.replace(/^[^']+(?='s To Do)/, name);
     }
 }
 
 // ── Data store ───────────────────────────────
-// Lists: [{ id, name }]
-// Todos: [{ id, listId, text, done, deleted, editing }]
 let lists = JSON.parse(localStorage.getItem('krhdev-lists') || '[]');
 let todos = JSON.parse(localStorage.getItem('krhdev-todos') || '[]');
 
-// One-time cleanup: remove any legacy todos that have no listId
 todos = todos.filter(t => t.listId !== undefined);
 localStorage.setItem('krhdev-todos', JSON.stringify(todos));
 
 let nextListId = lists.length ? Math.max(...lists.map(l => l.id)) + 1 : 1;
 let nextTodoId = todos.length ? Math.max(...todos.map(t => t.id)) + 1 : 1;
 let activeListId = null;
-let activeView = 'home'; // 'home' | 'all' | 'completed' | 'deleted' | 'log'
+let activeView   = 'home';
 
 function save() {
     localStorage.setItem('krhdev-lists', JSON.stringify(lists));
     localStorage.setItem('krhdev-todos', JSON.stringify(todos));
 }
 
+// ── Supabase helpers ──────────────────────────
+async function loadFromCloud() {
+    if (!useCloud) return;
+    const { data: cloudLists, error: le } = await supabase.from('lists').select('*').order('created_at');
+    const { data: cloudTodos, error: te } = await supabase.from('todos').select('*').order('created_at');
+    if (le || te) { console.error('Cloud load error', le || te); return; }
+    lists = (cloudLists || []).map(l => ({ id: l.id, name: l.name, category: l.category || 'General' }));
+    todos = (cloudTodos || []).map(t => ({ id: t.id, listId: t.list_id, text: t.text, done: t.done, deleted: t.deleted, editing: false }));
+    activeListId = lists.length ? lists[0].id : null;
+    render();
+}
+
 // ── Validation helpers ────────────────────────
-// Shows an inline warning message below an input, auto-clears after 3 s.
-// Each input gets at most one warning at a time.
 const _warnTimers = {};
 
 function showWarning(inputEl, message) {
     const id = inputEl.id || inputEl.name || 'field';
-
-    // Remove any existing warning for this input
     clearWarning(inputEl);
-
     const warn = document.createElement('p');
     warn.className = 'input-warning';
     warn.setAttribute('role', 'alert');
     warn.textContent = message;
     warn.id = `warn-${id}`;
-
-    // Mark the input as invalid for styling
     inputEl.classList.add('input-invalid');
     inputEl.setAttribute('aria-describedby', warn.id);
-
     inputEl.insertAdjacentElement('afterend', warn);
-
-    // Shake the input briefly
     inputEl.classList.add('input-shake');
     inputEl.addEventListener('animationend', () => inputEl.classList.remove('input-shake'), { once: true });
-
-    // Auto-dismiss after 3 s
     if (_warnTimers[id]) clearTimeout(_warnTimers[id]);
     _warnTimers[id] = setTimeout(() => clearWarning(inputEl), 3000);
 }
@@ -109,7 +105,6 @@ function clearWarning(inputEl) {
     if (_warnTimers[id]) { clearTimeout(_warnTimers[id]); delete _warnTimers[id]; }
 }
 
-// Normalise text for duplicate comparison (case-insensitive, collapsed whitespace)
 function normalise(str) {
     return str.trim().toLowerCase().replace(/\s+/g, ' ');
 }
@@ -126,114 +121,87 @@ function logChange(message) {
 }
 
 // ── CREATE — List ─────────────────────────────
-function addList() {
+async function addList() {
     const input = document.getElementById('new-list');
     if (!input) return;
     const name = input.value.trim();
-
-    // ── Validation ──
-    if (!name) {
-        showWarning(input, 'Please enter a list name.');
-        input.focus();
-        return;
-    }
-    if (name.length > 60) {
-        showWarning(input, 'List name must be 60 characters or fewer.');
-        input.focus();
-        return;
-    }
+    if (!name) { showWarning(input, 'Please enter a list name.'); input.focus(); return; }
+    if (name.length > 60) { showWarning(input, 'List name must be 60 characters or fewer.'); input.focus(); return; }
     const duplicate = lists.find(l => normalise(l.name) === normalise(name));
-    if (duplicate) {
-        showWarning(input, `A list called "${duplicate.name}" already exists.`);
-        input.focus();
-        return;
-    }
-    // ── End validation ──
-
+    if (duplicate) { showWarning(input, `A list called "${duplicate.name}" already exists.`); input.focus(); return; }
     clearWarning(input);
-    const list = { id: nextListId++, name };
-    lists.push(list);
-    activeListId = list.id;
+    const category = document.getElementById('new-list-category')?.value || 'General';
+    if (useCloud) {
+        const { data, error } = await supabase.from('lists').insert({ user_id: currentUser.id, name, category }).select().single();
+        if (error) { console.error(error); return; }
+        lists.push({ id: data.id, name: data.name, category: data.category });
+        activeListId = data.id;
+    } else {
+        const list = { id: nextListId++, name, category };
+        lists.push(list);
+        activeListId = list.id;
+        save();
+    }
     activeView = 'all';
-    save();
     logChange(`Created list: "${name}"`);
     input.value = '';
     render();
 }
 
 // ── DELETE — List ────────────────────────────
-function deleteList(id) {
+async function deleteList(id) {
     const list = lists.find(l => l.id === id);
     if (!list) return;
     if (!confirm(`Delete the list "${list.name}" and all its tasks?`)) return;
-
+    if (useCloud) {
+        await supabase.from('lists').delete().eq('id', id);
+    } else {
+        todos = todos.filter(t => t.listId !== id);
+        save();
+    }
     lists = lists.filter(l => l.id !== id);
     todos = todos.filter(t => t.listId !== id);
-    if (activeListId === id) {
-        activeListId = lists.length ? lists[0].id : null;
-    }
-    save();
+    if (activeListId === id) activeListId = lists.length ? lists[0].id : null;
     logChange(`Deleted list: "${list.name}"`);
     render();
 }
 
 // ── CREATE — Task ─────────────────────────────
-function addTodo() {
+async function addTodo() {
     if (!activeListId) return;
     const input = document.getElementById('new-todo');
     if (!input) return;
     const text = input.value.trim();
-
-    // ── Validation ──
-    if (!text) {
-        showWarning(input, 'Please enter a task.');
-        input.focus();
-        return;
-    }
-    if (text.length > 200) {
-        showWarning(input, 'Task must be 200 characters or fewer.');
-        input.focus();
-        return;
-    }
+    if (!text) { showWarning(input, 'Please enter a task.'); input.focus(); return; }
+    if (text.length > 200) { showWarning(input, 'Task must be 200 characters or fewer.'); input.focus(); return; }
     const activeTasks = todos.filter(t => t.listId === activeListId && !t.deleted);
     const duplicate = activeTasks.find(t => normalise(t.text) === normalise(text));
-    if (duplicate) {
-        showWarning(input, 'That task already exists in this list.');
-        input.focus();
-        return;
-    }
-    // ── End validation ──
-
+    if (duplicate) { showWarning(input, 'That task already exists in this list.'); input.focus(); return; }
     clearWarning(input);
-    const todo = { id: nextTodoId++, listId: activeListId, text, done: false, deleted: false, editing: false };
-    todos.push(todo);
-    save();
+    if (useCloud) {
+        const { data, error } = await supabase.from('todos').insert({ user_id: currentUser.id, list_id: activeListId, text, done: false, deleted: false }).select().single();
+        if (error) { console.error(error); return; }
+        todos.push({ id: data.id, listId: data.list_id, text: data.text, done: false, deleted: false, editing: false });
+    } else {
+        const todo = { id: nextTodoId++, listId: activeListId, text, done: false, deleted: false, editing: false };
+        todos.push(todo);
+        save();
+    }
     logChange(`Added: "${text}"`);
     input.value = '';
     render();
 }
 
 // ── READ (render) ─────────────────────────────
-const viewTitles = {
-    home:      'My To-Do Lists',
-    all:       'View Lists',
-    completed: 'Completed Tasks',
-    deleted:   'Deleted Tasks',
-    log:       'Recent Changes'
-};
+const viewTitles = { home: 'My To-Do Lists', all: 'View Lists', completed: 'Completed Tasks', deleted: 'Deleted Tasks', log: 'Recent Changes' };
 
 function render() {
-    if (activeListId !== null) {
-        localStorage.setItem('krhdev-active-list', activeListId);
-    }
-
+    if (activeListId !== null) localStorage.setItem('krhdev-active-list', activeListId);
     const titleEl = document.getElementById('page-title');
     if (titleEl) titleEl.textContent = viewTitles[activeView] || 'My To-Do Lists';
-
     document.querySelectorAll('[data-view]').forEach(link => {
         link.classList.toggle('active', link.dataset.view === activeView);
     });
-
     renderListTabs();
     renderTaskWidgets();
     renderLog();
@@ -244,39 +212,31 @@ function renderListTabs() {
     const tabsEl         = document.getElementById('list-tabs');
     const selectorWidget = document.getElementById('widget-list-selector');
     if (!tabsEl || !selectorWidget) return;
-
-    if (lists.length === 0) {
-        selectorWidget.style.display = 'none';
-        return;
-    }
-
+    if (lists.length === 0) { selectorWidget.style.display = 'none'; return; }
     selectorWidget.style.display = 'block';
     tabsEl.innerHTML = '';
-
-    lists.forEach(list => {
+    const filterEl = document.getElementById('category-filter');
+    const activeCategory = filterEl ? filterEl.value : 'All';
+    const visibleLists = activeCategory === 'All' ? lists : lists.filter(l => (l.category || 'General') === activeCategory);
+    visibleLists.forEach(list => {
         const btn = document.createElement('button');
         btn.className = 'list-tab' + (list.id === activeListId ? ' active' : '');
-
         const nameSpan = document.createElement('span');
         nameSpan.textContent = list.name;
+        if (list.category && list.category !== 'General') {
+            const catBadge = document.createElement('span');
+            catBadge.className = 'list-category-badge';
+            catBadge.textContent = list.category;
+            nameSpan.appendChild(catBadge);
+        }
         btn.appendChild(nameSpan);
-
         const delBtn = document.createElement('button');
         delBtn.className = 'list-tab-delete';
         delBtn.textContent = '✕';
         delBtn.title = 'Delete this list';
-        delBtn.addEventListener('click', e => {
-            e.stopPropagation();
-            deleteList(list.id);
-        });
+        delBtn.addEventListener('click', e => { e.stopPropagation(); deleteList(list.id); });
         btn.appendChild(delBtn);
-
-        btn.addEventListener('click', () => {
-            activeListId = list.id;
-            activeView = 'all';
-            render();
-        });
-
+        btn.addEventListener('click', () => { activeListId = list.id; activeView = 'all'; render(); });
         tabsEl.appendChild(btn);
     });
 }
@@ -288,279 +248,172 @@ function renderTaskWidgets() {
     const deletedWidget   = document.getElementById('widget-deleted');
     const logWidget       = document.getElementById('widget-log');
     const label           = document.getElementById('active-list-label');
-
     const hasList = activeListId !== null;
-
     if (addWidget)       addWidget.style.display       = (hasList && activeView === 'all')       ? 'block' : 'none';
     if (allWidget)       allWidget.style.display       = (hasList && activeView === 'all')       ? 'block' : 'none';
     if (completedWidget) completedWidget.style.display = (hasList && activeView === 'completed') ? 'block' : 'none';
     if (deletedWidget)   deletedWidget.style.display   = (hasList && activeView === 'deleted')   ? 'block' : 'none';
     if (logWidget)       logWidget.style.display       = (activeView === 'log')                  ? 'block' : 'none';
-
     if (!hasList) return;
-
     const activeList = lists.find(l => l.id === activeListId);
     if (label && activeList) label.textContent = `— ${activeList.name}`;
-
     const listTodos = todos.filter(t => t.listId === activeListId);
-
-    renderList(
-        'list-container',
-        'empty-active',
-        listTodos.filter(t => !t.done && !t.deleted),
-        renderActiveItem
-    );
-
-    renderList(
-        'completed-list-container',
-        'empty-completed',
-        listTodos.filter(t => t.done && !t.deleted),
-        renderCompletedItem
-    );
-
-    renderList(
-        'deleted-list-container',
-        'empty-deleted',
-        listTodos.filter(t => t.deleted),
-        renderDeletedItem
-    );
-
+    renderList('list-container',           'empty-active',    listTodos.filter(t => !t.done && !t.deleted), renderActiveItem);
+    renderList('completed-list-container', 'empty-completed', listTodos.filter(t => t.done && !t.deleted),  renderCompletedItem);
+    renderList('deleted-list-container',   'empty-deleted',   listTodos.filter(t => t.deleted),             renderDeletedItem);
     const clearBtn = document.getElementById('clear-deleted-btn');
-    if (clearBtn) {
-        clearBtn.style.display = listTodos.some(t => t.deleted) ? 'inline-block' : 'none';
-    }
+    if (clearBtn) clearBtn.style.display = listTodos.some(t => t.deleted) ? 'inline-block' : 'none';
 }
 
 function renderList(listId, emptyId, items, itemRenderer) {
     const list  = document.getElementById(listId);
     const empty = document.getElementById(emptyId);
     if (!list) return;
-
     list.innerHTML = '';
     list.className = 'task-list';
     if (empty) empty.style.display = items.length ? 'none' : 'block';
-
     items.forEach(todo => list.appendChild(itemRenderer(todo)));
 }
 
 // ── Item renderers ────────────────────────────
-
 function renderActiveItem(todo) {
     const li = document.createElement('li');
     li.className = 'task-item';
     li.dataset.id = todo.id;
-
     if (todo.editing) {
         const editInput = document.createElement('input');
-        editInput.type = 'text';
-        editInput.className = 'edit-input';
-        editInput.value = todo.text;
-
+        editInput.type = 'text'; editInput.className = 'edit-input'; editInput.value = todo.text;
         const saveBtn = document.createElement('button');
-        saveBtn.className = 'btn-save';
-        saveBtn.textContent = 'Save';
+        saveBtn.className = 'btn-save'; saveBtn.textContent = 'Save';
         saveBtn.addEventListener('click', () => saveEdit(todo.id, editInput.value));
-
         const cancelBtn = document.createElement('button');
-        cancelBtn.className = 'btn-cancel';
-        cancelBtn.textContent = 'Cancel';
+        cancelBtn.className = 'btn-cancel'; cancelBtn.textContent = 'Cancel';
         cancelBtn.addEventListener('click', () => cancelEdit(todo.id));
-
         editInput.addEventListener('keydown', e => {
             if (e.key === 'Enter')  saveEdit(todo.id, editInput.value);
             if (e.key === 'Escape') cancelEdit(todo.id);
         });
-
-        li.appendChild(editInput);
-        li.appendChild(saveBtn);
-        li.appendChild(cancelBtn);
-
+        li.appendChild(editInput); li.appendChild(saveBtn); li.appendChild(cancelBtn);
         setTimeout(() => { editInput.focus(); editInput.select(); }, 0);
     } else {
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
         checkbox.addEventListener('change', () => toggleDone(todo.id));
-
         const span = document.createElement('span');
-        span.className = 'task-text';
-        span.textContent = todo.text;
-
+        span.className = 'task-text'; span.textContent = todo.text;
         const editBtn = document.createElement('button');
-        editBtn.className = 'btn-edit';
-        editBtn.textContent = 'Edit';
+        editBtn.className = 'btn-edit'; editBtn.textContent = 'Edit';
         editBtn.addEventListener('click', () => startEdit(todo.id));
-
         const deleteBtn = document.createElement('button');
-        deleteBtn.className = 'btn-delete';
-        deleteBtn.textContent = 'Delete';
+        deleteBtn.className = 'btn-delete'; deleteBtn.textContent = 'Delete';
         deleteBtn.addEventListener('click', () => deleteTodo(todo.id));
-
-        li.appendChild(checkbox);
-        li.appendChild(span);
-        li.appendChild(editBtn);
-        li.appendChild(deleteBtn);
+        li.appendChild(checkbox); li.appendChild(span); li.appendChild(editBtn); li.appendChild(deleteBtn);
     }
-
     return li;
 }
 
 function renderCompletedItem(todo) {
-    const li = document.createElement('li');
-    li.className = 'task-item';
-
+    const li = document.createElement('li'); li.className = 'task-item';
     const checkbox = document.createElement('input');
-    checkbox.type = 'checkbox';
-    checkbox.checked = true;
+    checkbox.type = 'checkbox'; checkbox.checked = true;
     checkbox.addEventListener('change', () => toggleDone(todo.id));
-
     const span = document.createElement('span');
-    span.className = 'task-text done';
-    span.textContent = todo.text;
-
+    span.className = 'task-text done'; span.textContent = todo.text;
     const deleteBtn = document.createElement('button');
-    deleteBtn.className = 'btn-delete';
-    deleteBtn.textContent = 'Delete';
+    deleteBtn.className = 'btn-delete'; deleteBtn.textContent = 'Delete';
     deleteBtn.addEventListener('click', () => deleteTodo(todo.id));
-
-    li.appendChild(checkbox);
-    li.appendChild(span);
-    li.appendChild(deleteBtn);
+    li.appendChild(checkbox); li.appendChild(span); li.appendChild(deleteBtn);
     return li;
 }
 
 function renderDeletedItem(todo) {
-    const li = document.createElement('li');
-    li.className = 'task-item deleted';
-
+    const li = document.createElement('li'); li.className = 'task-item deleted';
     const span = document.createElement('span');
-    span.className = 'task-text';
-    span.textContent = todo.text;
-
+    span.className = 'task-text'; span.textContent = todo.text;
     const restoreBtn = document.createElement('button');
-    restoreBtn.className = 'btn-restore';
-    restoreBtn.textContent = 'Restore';
+    restoreBtn.className = 'btn-restore'; restoreBtn.textContent = 'Restore';
     restoreBtn.addEventListener('click', () => restoreTodo(todo.id));
-
-    li.appendChild(span);
-    li.appendChild(restoreBtn);
+    li.appendChild(span); li.appendChild(restoreBtn);
     return li;
 }
 
 // ── UPDATE ────────────────────────────────────
-function toggleDone(id) {
+async function toggleDone(id) {
     const todo = todos.find(t => t.id === id);
     if (!todo) return;
     todo.done = !todo.done;
-    save();
+    if (useCloud) { await supabase.from('todos').update({ done: todo.done }).eq('id', id); } else { save(); }
     logChange(todo.done ? `Completed: "${todo.text}"` : `Reopened: "${todo.text}"`);
     render();
 }
 
-function startEdit(id) {
-    todos.forEach(t => { t.editing = (t.id === id); });
-    render();
-}
+function startEdit(id) { todos.forEach(t => { t.editing = (t.id === id); }); render(); }
 
-function saveEdit(id, newText) {
+async function saveEdit(id, newText) {
     const text = newText.trim();
     const todo = todos.find(t => t.id === id);
     if (!todo) return;
-
-    // ── Validation ──
-    if (!text) {
-        // Find the live edit input inside the task item and warn on it
-        const li = document.querySelector(`.task-item[data-id="${id}"]`);
-        const editInput = li ? li.querySelector('.edit-input') : null;
-        if (editInput) {
-            showWarning(editInput, 'Task cannot be empty.');
-            editInput.focus();
-        }
-        return;
-    }
-    if (text.length > 200) {
-        const li = document.querySelector(`.task-item[data-id="${id}"]`);
-        const editInput = li ? li.querySelector('.edit-input') : null;
-        if (editInput) {
-            showWarning(editInput, 'Task must be 200 characters or fewer.');
-            editInput.focus();
-        }
-        return;
-    }
-    // Duplicate check — exclude the task being edited from the comparison
+    const li = document.querySelector(`.task-item[data-id="${id}"]`);
+    const editInput = li ? li.querySelector('.edit-input') : null;
+    if (!text) { if (editInput) { showWarning(editInput, 'Task cannot be empty.'); editInput.focus(); } return; }
+    if (text.length > 200) { if (editInput) { showWarning(editInput, 'Task must be 200 characters or fewer.'); editInput.focus(); } return; }
     const activeTasks = todos.filter(t => t.listId === todo.listId && !t.deleted && t.id !== id);
     const duplicate = activeTasks.find(t => normalise(t.text) === normalise(text));
-    if (duplicate) {
-        const li = document.querySelector(`.task-item[data-id="${id}"]`);
-        const editInput = li ? li.querySelector('.edit-input') : null;
-        if (editInput) {
-            showWarning(editInput, 'Another task with that name already exists.');
-            editInput.focus();
-        }
-        return;
-    }
-    // ── End validation ──
-
+    if (duplicate) { if (editInput) { showWarning(editInput, 'Another task with that name already exists.'); editInput.focus(); } return; }
     const old = todo.text;
-    todo.text = text;
-    todo.editing = false;
-    save();
+    todo.text = text; todo.editing = false;
+    if (useCloud) { await supabase.from('todos').update({ text }).eq('id', id); } else { save(); }
     logChange(`Edited: "${old}" → "${text}"`);
     render();
 }
 
-function cancelEdit(id) {
-    const todo = todos.find(t => t.id === id);
-    if (todo) { todo.editing = false; render(); }
-}
+function cancelEdit(id) { const todo = todos.find(t => t.id === id); if (todo) { todo.editing = false; render(); } }
 
 // ── DELETE ────────────────────────────────────
-function deleteTodo(id) {
+async function deleteTodo(id) {
     const todo = todos.find(t => t.id === id);
     if (!todo) return;
-    todo.deleted = true;
-    todo.done = false;
-    todo.editing = false;
-    save();
+    todo.deleted = true; todo.done = false; todo.editing = false;
+    if (useCloud) { await supabase.from('todos').update({ deleted: true, done: false }).eq('id', id); } else { save(); }
     logChange(`Deleted: "${todo.text}"`);
     render();
 }
 
-function restoreTodo(id) {
+async function restoreTodo(id) {
     const todo = todos.find(t => t.id === id);
     if (!todo) return;
     todo.deleted = false;
-    save();
+    if (useCloud) { await supabase.from('todos').update({ deleted: false }).eq('id', id); } else { save(); }
     logChange(`Restored: "${todo.text}"`);
     render();
 }
 
-function clearDeleted() {
+async function clearDeleted() {
     if (!activeListId) return;
-    const count = todos.filter(t => t.listId === activeListId && t.deleted).length;
+    const toDelete = todos.filter(t => t.listId === activeListId && t.deleted);
+    const count = toDelete.length;
+    if (useCloud) { for (const t of toDelete) { await supabase.from('todos').delete().eq('id', t.id); } }
     todos = todos.filter(t => !(t.listId === activeListId && t.deleted));
-    save();
+    if (!useCloud) save();
     logChange(`Permanently removed ${count} deleted task(s)`);
     render();
 }
 
 // ── Stats ─────────────────────────────────────
 function updateStats() {
-    const activeTodos = todos.filter(t => !t.done && !t.deleted);
-    const doneTodos   = todos.filter(t => t.done && !t.deleted);
-
+    const activeTodos    = todos.filter(t => !t.done && !t.deleted);
+    const doneTodos      = todos.filter(t => t.done && !t.deleted);
     const completedLists = lists.filter(l => {
         const listTasks = todos.filter(t => t.listId === l.id && !t.deleted);
         return listTasks.length > 0 && listTasks.every(t => t.done);
     });
-
     const listsEl     = document.getElementById('stat-lists');
     const activeEl    = document.getElementById('stat-active');
     const doneEl      = document.getElementById('stat-done');
     const listsDoneEl = document.getElementById('stat-lists-done');
-
-    if (listsEl)     listsEl.textContent    = lists.length;
-    if (activeEl)    activeEl.textContent   = activeTodos.length;
-    if (doneEl)      doneEl.textContent     = doneTodos.length;
+    if (listsEl)     listsEl.textContent     = lists.length;
+    if (activeEl)    activeEl.textContent    = activeTodos.length;
+    if (doneEl)      doneEl.textContent      = doneTodos.length;
     if (listsDoneEl) listsDoneEl.textContent = completedLists.length;
 }
 
@@ -570,11 +423,8 @@ function renderLog() {
     const container = document.getElementById('recent-changes-container');
     const emptyLog  = document.getElementById('empty-log');
     if (!container) return;
-
-    container.innerHTML = '';
-    container.className = 'log-list';
+    container.innerHTML = ''; container.className = 'log-list';
     if (emptyLog) emptyLog.style.display = log.length ? 'none' : 'block';
-
     log.forEach(entry => {
         const li = document.createElement('li');
         li.className = 'log-item';
@@ -585,31 +435,56 @@ function renderLog() {
 
 // ── Utility ───────────────────────────────────
 function escapeHtml(str) {
-    return String(str)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;');
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-// ── Wire up events ────────────────────────────
-document.addEventListener('DOMContentLoaded', function () {
-    // ── Mobile sidebar ──────────────────────────
+// ── Sidebar user strip ────────────────────────
+function renderSidebarUser() {
+    const existing = document.getElementById('sidebar-user-strip');
+    if (existing) existing.remove();
+    const sidebar = document.getElementById('sidebar');
+    if (!sidebar) return;
+    if (currentUser) {
+        const strip = document.createElement('div');
+        strip.id = 'sidebar-user-strip';
+        strip.className = 'sidebar-user';
+        strip.innerHTML = `<span title="${currentUser.email}">👤 ${currentUser.email}</span><button class="btn-signout" id="sign-out-btn">Sign out</button>`;
+        const header = sidebar.querySelector('.sidebar-header');
+        if (header) header.insertAdjacentElement('afterend', strip);
+        else sidebar.prepend(strip);
+        document.getElementById('sign-out-btn').addEventListener('click', signOut);
+    }
+}
+
+// ── Auth ──────────────────────────────────────
+async function signOut() {
+    await supabase.auth.signOut();
+    currentUser = null; useCloud = false;
+    lists = JSON.parse(localStorage.getItem('krhdev-lists') || '[]');
+    todos = JSON.parse(localStorage.getItem('krhdev-todos') || '[]');
+    renderSidebarUser();
+    showAuthOverlay();
+    render();
+}
+
+function showAuthOverlay() { const o = document.getElementById('auth-overlay'); if (o) o.style.display = 'flex'; }
+function hideAuthOverlay() { const o = document.getElementById('auth-overlay'); if (o) o.style.display = 'none'; }
+
+// ── DOMContentLoaded ──────────────────────────
+document.addEventListener('DOMContentLoaded', async function () {
+
+    // Mobile sidebar
     const sidebar       = document.getElementById('sidebar');
     const sidebarOpen   = document.getElementById('sidebar-open');
     const sidebarToggle = document.getElementById('sidebar-toggle');
-
     const overlay = document.createElement('div');
     overlay.className = 'sidebar-overlay';
     document.body.appendChild(overlay);
-
     function openSidebar()  { sidebar.classList.add('open');    overlay.classList.add('visible'); }
     function closeSidebar() { sidebar.classList.remove('open'); overlay.classList.remove('visible'); }
-
     if (sidebarOpen)   sidebarOpen.addEventListener('click', openSidebar);
     if (sidebarToggle) sidebarToggle.addEventListener('click', closeSidebar);
     overlay.addEventListener('click', closeSidebar);
-
     document.querySelectorAll('[data-view]').forEach(link => {
         link.addEventListener('click', () => { if (window.innerWidth <= 640) closeSidebar(); });
     });
@@ -617,10 +492,94 @@ document.addEventListener('DOMContentLoaded', function () {
     loadTheme();
 
     const radios = document.querySelectorAll('input[name="theme"]');
-    radios.forEach(r => {
-        r.addEventListener('change', () => applyTheme(r.value));
-    });
+    radios.forEach(r => { r.addEventListener('change', () => applyTheme(r.value)); });
 
+    // Auth overlay
+    const authSubmitBtn = document.getElementById('auth-submit-btn');
+    const authSwitch    = document.getElementById('auth-switch');
+    const authSkipBtn   = document.getElementById('auth-skip-btn');
+    const authEmail     = document.getElementById('auth-email');
+    const authPassword  = document.getElementById('auth-password');
+    const authMsg       = document.getElementById('auth-msg');
+    const authTitle     = document.getElementById('auth-title');
+    const authOverlay   = document.getElementById('auth-overlay');
+    let authMode = 'signin';
+
+    if (authSwitch) {
+        authSwitch.addEventListener('click', e => {
+            e.preventDefault();
+            authMode = authMode === 'signin' ? 'signup' : 'signin';
+            if (authTitle) authTitle.textContent = authMode === 'signin' ? 'Sign in to KRHDev To Do List' : 'Create an account';
+            authSwitch.textContent = authMode === 'signin' ? 'Sign Up' : 'Sign In';
+            authSwitch.previousSibling.textContent = authMode === 'signin' ? "Don't have an account? " : 'Already have an account? ';
+            if (authSubmitBtn) authSubmitBtn.textContent = authMode === 'signin' ? 'Sign In' : 'Create Account';
+            if (authMsg) { authMsg.textContent = ''; authMsg.className = ''; }
+        });
+    }
+
+    if (authSubmitBtn) {
+        authSubmitBtn.addEventListener('click', async () => {
+            const email    = authEmail?.value.trim();
+            const password = authPassword?.value;
+            if (!email || !password) { if (authMsg) authMsg.textContent = 'Please enter your email and password.'; return; }
+            authSubmitBtn.textContent = authMode === 'signin' ? 'Signing in…' : 'Creating account…';
+            authSubmitBtn.disabled = true;
+            let errMsg = null;
+            if (authMode === 'signin') {
+                const { error } = await supabase.auth.signInWithPassword({ email, password });
+                if (error) errMsg = error.message;
+            } else {
+                const { error } = await supabase.auth.signUp({ email, password });
+                if (error) errMsg = error.message;
+                else {
+                    if (authMsg) { authMsg.textContent = 'Account created! Check your email to confirm, then sign in.'; authMsg.className = 'success'; }
+                }
+            }
+            authSubmitBtn.disabled = false;
+            authSubmitBtn.textContent = authMode === 'signin' ? 'Sign In' : 'Create Account';
+            if (errMsg && authMsg) { authMsg.textContent = errMsg; authMsg.className = ''; }
+        });
+    }
+
+    if (authPassword) {
+        authPassword.addEventListener('keydown', e => { if (e.key === 'Enter') authSubmitBtn?.click(); });
+    }
+
+    if (authSkipBtn) {
+        authSkipBtn.addEventListener('click', () => { hideAuthOverlay(); useCloud = false; render(); });
+    }
+
+    // Show overlay immediately — hide only once session confirmed
+    if (authOverlay) showAuthOverlay();
+
+    // Supabase auth state — use window.supabase to ensure CDN is loaded
+    const _supabase = (typeof window.supabase !== 'undefined' && window.supabase.auth) ? window.supabase : null;
+    if (_supabase) {
+        _supabase.auth.onAuthStateChange(async (event, session) => {
+            if (session?.user) {
+                currentUser = session.user;
+                useCloud    = true;
+                hideAuthOverlay();
+                renderSidebarUser();
+                await loadFromCloud();
+            } else {
+                currentUser = null; useCloud = false;
+                renderSidebarUser();
+                if (authOverlay) showAuthOverlay();
+            }
+        });
+        const { data: { session } } = await _supabase.auth.getSession();
+        if (!session && authOverlay) showAuthOverlay();
+    } else {
+        // Supabase not available — show overlay anyway so user sees the card
+        if (authOverlay) showAuthOverlay();
+    }
+
+    // Category filter
+    const categoryFilter = document.getElementById('category-filter');
+    if (categoryFilter) categoryFilter.addEventListener('change', () => render());
+
+    // Settings: clear data
     const clearDataBtn = document.getElementById('clear-data-btn');
     if (clearDataBtn) {
         clearDataBtn.addEventListener('click', () => {
@@ -633,67 +592,46 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    const navLinks = document.querySelectorAll('[data-view]');
-    navLinks.forEach(link => {
-        link.addEventListener('click', e => {
-            e.preventDefault();
-            activeView = link.dataset.view;
-            render();
-        });
+    // Nav links
+    document.querySelectorAll('[data-view]').forEach(link => {
+        link.addEventListener('click', e => { e.preventDefault(); activeView = link.dataset.view; render(); });
     });
 
+    // Main inputs
     const addListBtn      = document.getElementById('add-list-btn');
     const newListInput    = document.getElementById('new-list');
     const addBtn          = document.getElementById('add-btn');
     const newTodoInput    = document.getElementById('new-todo');
     const clearDeletedBtn = document.getElementById('clear-deleted-btn');
-
     if (addListBtn)      addListBtn.addEventListener('click', addList);
     if (newListInput)    newListInput.addEventListener('keydown', e => { if (e.key === 'Enter') addList(); });
     if (addBtn)          addBtn.addEventListener('click', addTodo);
     if (newTodoInput)    newTodoInput.addEventListener('keydown', e => { if (e.key === 'Enter') addTodo(); });
     if (clearDeletedBtn) clearDeletedBtn.addEventListener('click', clearDeleted);
+    [newListInput, newTodoInput].forEach(input => { if (input) input.addEventListener('input', () => clearWarning(input)); });
 
-    // Clear any stale warnings when the user starts typing again
-    [newListInput, newTodoInput].forEach(input => {
-        if (input) input.addEventListener('input', () => clearWarning(input));
-    });
-
-    // ── Personalisation (settings page) ────────
-    const userNameInput  = document.getElementById('user-name-input');
-    const saveNameBtn    = document.getElementById('save-name-btn');
-    const clearNameBtn   = document.getElementById('clear-name-btn');
-    const nameSavedMsg   = document.getElementById('name-saved-msg');
-
+    // Personalisation
+    const userNameInput = document.getElementById('user-name-input');
+    const saveNameBtn   = document.getElementById('save-name-btn');
+    const clearNameBtn  = document.getElementById('clear-name-btn');
+    const nameSavedMsg  = document.getElementById('name-saved-msg');
     if (userNameInput) {
-        // Pre-fill with current saved name (but not the default)
         const current = localStorage.getItem(NAME_KEY);
         if (current) userNameInput.value = current;
-
-        const showSaved = () => {
-            if (!nameSavedMsg) return;
-            nameSavedMsg.style.display = 'block';
-            setTimeout(() => { nameSavedMsg.style.display = 'none'; }, 2500);
-        };
-
+        const showSaved = () => { if (!nameSavedMsg) return; nameSavedMsg.style.display = 'block'; setTimeout(() => { nameSavedMsg.style.display = 'none'; }, 2500); };
         const saveName = () => {
-            const raw  = userNameInput.value.trim();
-            const name = raw.replace(/[<>"]/g, ''); // basic sanitise
-            if (!name) {
-                showWarning(userNameInput, 'Please enter a name, or use Reset to Default.');
-                return;
-            }
+            const raw = userNameInput.value.trim();
+            const name = raw.replace(/[<>"]/g, '');
+            if (!name) { showWarning(userNameInput, 'Please enter a name, or use Reset to Default.'); return; }
             clearWarning(userNameInput);
             localStorage.setItem(NAME_KEY, name);
             applyUserName();
             showSaved();
         };
-
         saveNameBtn.addEventListener('click', saveName);
         userNameInput.addEventListener('keydown', e => { if (e.key === 'Enter') saveName(); });
         userNameInput.addEventListener('input', () => clearWarning(userNameInput));
     }
-
     if (clearNameBtn) {
         clearNameBtn.addEventListener('click', () => {
             localStorage.removeItem(NAME_KEY);
@@ -702,25 +640,22 @@ document.addEventListener('DOMContentLoaded', function () {
             if (nameSavedMsg) {
                 nameSavedMsg.textContent = '✓ Reset to default.';
                 nameSavedMsg.style.display = 'block';
-                setTimeout(() => {
-                    nameSavedMsg.style.display = 'none';
-                    nameSavedMsg.textContent = '✓ Name saved!';
-                }, 2500);
+                setTimeout(() => { nameSavedMsg.style.display = 'none'; nameSavedMsg.textContent = '✓ Name saved!'; }, 2500);
             }
         });
     }
 
-    if (lists.length > 0) {
+    // Restore last active list (localStorage mode only)
+    if (!useCloud && lists.length > 0) {
         const lastActive = localStorage.getItem('krhdev-active-list');
         const found = lastActive && lists.find(l => l.id === parseInt(lastActive));
         activeListId = found ? found.id : lists[0].id;
     }
 
-    render();
+    if (!useCloud) render();
 });
 
+// Service worker
 if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js');
-        });
-    }
+    window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js'); });
+}

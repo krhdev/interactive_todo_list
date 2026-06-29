@@ -13,17 +13,36 @@
     <link rel="apple-touch-icon" href="/assets/images/todo-icon-192x192.png">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="./assets/css/style.css">
-
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js');
-        });
-      }
+      const SUPABASE_URL = 'https://dzvsnlxmihqsczgwvhag.supabase.co';
+      const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR6dnNubHhtaWhxc2N6Z3d2aGFnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI2ODg4NDgsImV4cCI6MjA5ODI2NDg0OH0.e8kXUW9mIK-4fCAflIUpESr6mjywABknafgocGP4YlM';
+      // Store on window so script.js can always access it
+      window.supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
     </script>
 </head>
 
 <body>
+
+    <!-- Auth overlay -->
+    <div id="auth-overlay" style="display:none;">
+        <div id="auth-card">
+            <img src="./assets/images/todo-icon-192x192.png" width="60px">
+            <h2 id="auth-title">Sign in to KRHDev To Do List</h2>
+            <p id="auth-subtitle">Save your lists across all your devices</p>
+            <div class="add-form">
+                <input type="email" id="auth-email" placeholder="Email address" />
+            </div>
+            <div class="add-form">
+                <input type="password" id="auth-password" placeholder="Password" />
+            </div>
+            <button id="auth-submit-btn">Sign In</button>
+            <p id="auth-toggle">Don't have an account? <a href="#" id="auth-switch">Sign Up</a></p>
+            <p id="auth-msg"></p>
+            <hr>
+            <button id="auth-skip-btn">Continue without signing in</button>
+        </div>
+    </div>
 
     <div class="container">
         <div class="sidebar" id="sidebar">
@@ -61,6 +80,16 @@
                 <h2>New List</h2>
                 <div class="add-form">
                     <input type="text" id="new-list" placeholder="Enter list name" />
+                    <select id="new-list-category" class="category-select">
+                        <option value="General">General</option>
+                        <option value="Work">Work</option>
+                        <option value="Shopping">Shopping</option>
+                        <option value="Personal">Personal</option>
+                        <option value="Health">Health</option>
+                        <option value="Finance">Finance</option>
+                        <option value="Home">Home</option>
+                        <option value="Education">Education</option>
+                    </select>
                     <button id="add-list-btn">Create List</button>
                 </div>
             </div>
@@ -68,6 +97,20 @@
             <!-- LIST SELECTOR — shown once lists exist -->
             <div class="widget" id="widget-list-selector" style="display:none;">
                 <h2>Your Lists</h2>
+                <div class="category-filter-row">
+                    <label for="category-filter">Filter by category:</label>
+                    <select id="category-filter" class="category-select">
+                        <option value="All">All</option>
+                        <option value="General">General</option>
+                        <option value="Work">Work</option>
+                        <option value="Shopping">Shopping</option>
+                        <option value="Personal">Personal</option>
+                        <option value="Health">Health</option>
+                        <option value="Finance">Finance</option>
+                        <option value="Home">Home</option>
+                        <option value="Education">Education</option>
+                    </select>
+                </div>
                 <div id="list-tabs" class="list-tabs"></div>
             </div>
 
@@ -110,6 +153,7 @@
             </div>
         </div>
     </div>
+
     <script src="./assets/js/script.js"></script>
     <script src="./assets/js/json-io.js"></script>
     <script src="./assets/js/pwa-install.js"></script>
