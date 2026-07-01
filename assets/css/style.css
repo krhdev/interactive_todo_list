@@ -886,3 +886,167 @@ body, html {
         width: 100%;
     }
 }
+
+/* ── UI Refresh ── */
+
+/* Cleaner widget cards */
+.widget {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 20px;
+}
+
+/* Category pills filter */
+.category-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 14px;
+}
+
+.category-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 14px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 0.82rem;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.category-pill:hover {
+    border-color: var(--brand);
+    color: var(--text);
+}
+
+.category-pill.active {
+    background: var(--brand);
+    border-color: var(--brand);
+    color: white;
+}
+
+.category-pill .pill-count {
+    font-size: 0.75rem;
+    opacity: 0.8;
+    font-weight: 500;
+}
+
+/* Focus task card */
+.focus-card {
+    border: 1px solid #f0a500;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+    background: var(--surface);
+    position: relative;
+}
+
+.focus-card-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: #f0a500;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.focus-card-label::before {
+    content: '';
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #f0a500;
+    flex-shrink: 0;
+}
+
+.focus-card-task {
+    font-size: 1.1rem;
+    font-weight: 500;
+    color: var(--text);
+    line-height: 1.4;
+    margin-bottom: 16px;
+}
+
+.focus-card-list {
+    display: inline-block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    color: var(--brand);
+    background: var(--surface-2);
+    border-radius: 10px;
+    padding: 3px 10px;
+    margin-bottom: 14px;
+}
+
+[data-theme="dark"] .focus-card-list {
+    color: var(--brand-readable);
+}
+
+.focus-card-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.btn-focus-done {
+    padding: 7px 16px;
+    border-radius: 8px;
+    border: 1px solid #43a047;
+    background: transparent;
+    color: #43a047;
+    font-size: 0.85rem;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.btn-focus-done:hover { background: #43a047; color: white; }
+
+.btn-focus-reroll {
+    padding: 7px 16px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.btn-focus-reroll:hover { border-color: var(--text-muted); color: var(--text); }
+
+.btn-focus-clear {
+    padding: 7px 16px;
+    border-radius: 8px;
+    border: none;
+    background: transparent;
+    color: var(--text-faint);
+    font-size: 0.85rem;
+    font-family: inherit;
+    cursor: pointer;
+    transition: color 0.15s;
+}
+
+.btn-focus-clear:hover { color: var(--text-muted); }
+
+/* Task count badge on list tabs */
+.list-tab-count {
+    font-size: 0.72rem;
+    background: rgba(255,255,255,0.15);
+    border-radius: 10px;
+    padding: 1px 7px;
+    margin-left: 2px;
+}
+
+.list-tab.active .list-tab-count {
+    background: rgba(255,255,255,0.25);
+}
