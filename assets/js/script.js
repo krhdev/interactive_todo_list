@@ -280,8 +280,8 @@ function renderListTabs() {
 
         categories.forEach(cat => {
             const count = cat === 'All'
-                ? todos.filter(t => !t.done && !t.deleted).length
-                : todos.filter(t => !t.done && !t.deleted && lists.find(l => l.id === t.listId && (l.category || 'General') === cat)).length;
+                ? lists.length
+                : lists.filter(l => (l.category || 'General') === cat).length;
 
             const pill = document.createElement('button');
             pill.className = 'category-pill' + (activeCat === cat ? ' active' : '');
