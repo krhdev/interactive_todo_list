@@ -786,6 +786,46 @@ document.addEventListener('DOMContentLoaded', async function () {
     const categoryFilter = document.getElementById('category-filter');
     if (categoryFilter) categoryFilter.addEventListener('change', () => render());
 
+    // + New category
+    const newCatSelect = document.getElementById('new-list-category');
+    const newCatInput  = document.getElementById('new-category-input');
+
+    if (newCatSelect && newCatInput) {
+        newCatSelect.addEventListener('change', () => {
+            if (newCatSelect.value === '__new__') {
+                newCatInput.style.display = 'block';
+                newCatInput.focus();
+            } else {
+                newCatInput.style.display = 'none';
+                newCatInput.value = '';
+            }
+        });
+
+        // When user types a new category and presses Enter, add it to the select
+        newCatInput.addEventListener('keydown', e => {
+            if (e.key === 'Enter') {
+                const val = newCatInput.value.trim();
+                if (!val) return;
+                // Check not already in list
+                const exists = Array.from(newCatSelect.options).find(o => o.value === val);
+                if (!exists) {
+                    const opt = document.createElement('option');
+                    opt.value = val; opt.textContent = val;
+                    // Insert before the + New option
+                    newCatSelect.insertBefore(opt, newCatSelect.lastElementChild);
+                }
+                newCatSelect.value = val;
+                newCatInput.style.display = 'none';
+                newCatInput.value = '';
+            }
+            if (e.key === 'Escape') {
+                newCatSelect.value = 'General';
+                newCatInput.style.display = 'none';
+                newCatInput.value = '';
+            }
+        });
+    }
+
     // Settings: clear data
     const clearDataBtn = document.getElementById('clear-data-btn');
     if (clearDataBtn) {

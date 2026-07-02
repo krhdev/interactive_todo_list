@@ -95,6 +95,7 @@
                 <div class="add-form">
                     <input type="text" id="new-list" placeholder="Enter list name" />
                     <select id="new-list-category" class="category-select">
+                        <option value="General">Category</option>
                         <option value="General">General</option>
                         <option value="Today">📌 Today</option>
                         <option value="Daily">🔁 Daily</option>
@@ -102,7 +103,9 @@
                         <option value="Training">📚 Training</option>
                         <option value="Research">🔬 Research</option>
                         <option value="Personal Projects">🗂️ Personal Projects</option>
+                        <option value="__new__">＋ New category...</option>
                     </select>
+                    <input type="text" id="new-category-input" placeholder="New category name" style="display:none;" />
                     <button id="add-list-btn">Create List</button>
                 </div>
             </div>
