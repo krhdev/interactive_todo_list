@@ -792,42 +792,47 @@ document.addEventListener('DOMContentLoaded', async function () {
     const newCatSelect = document.getElementById('new-list-category');
     const newCatInput  = document.getElementById('new-category-input');
 
+    const newCatRow        = document.getElementById('new-category-row');
+    const newCatConfirmBtn = document.getElementById('new-category-confirm-btn');
+
+    function confirmNewCategory() {
+        const val = newCatInput?.value.trim();
+        if (!val) return;
+        const exists = Array.from(newCatSelect.options).find(o => o.value === val);
+        if (!exists) {
+            const opt = document.createElement('option');
+            opt.value = val; opt.textContent = val;
+            newCatSelect.insertBefore(opt, newCatSelect.lastElementChild);
+        }
+        newCatSelect.value = val;
+        if (newCatRow) newCatRow.style.display = 'none';
+        if (newCatInput) newCatInput.value = '';
+        document.getElementById('new-list')?.focus();
+    }
+
     if (newCatSelect && newCatInput) {
         newCatSelect.addEventListener('change', () => {
             if (newCatSelect.value === '__new__') {
-                newCatInput.style.display = 'block';
+                if (newCatRow) newCatRow.style.display = 'flex';
                 newCatInput.focus();
             } else {
-                newCatInput.style.display = 'none';
+                if (newCatRow) newCatRow.style.display = 'none';
                 newCatInput.value = '';
             }
         });
 
         newCatInput.addEventListener('keydown', e => {
-            if (e.key === 'Enter') {
-                e.preventDefault(); // stop addList() firing
-                const val = newCatInput.value.trim();
-                if (!val) return;
-                // Add to select if not already there
-                const exists = Array.from(newCatSelect.options).find(o => o.value === val);
-                if (!exists) {
-                    const opt = document.createElement('option');
-                    opt.value = val; opt.textContent = val;
-                    newCatSelect.insertBefore(opt, newCatSelect.lastElementChild);
-                }
-                // Select the new value so addList() picks it up correctly
-                newCatSelect.value = val;
-                newCatInput.style.display = 'none';
-                newCatInput.value = '';
-                // Focus the list name input ready to type
-                document.getElementById('new-list')?.focus();
-            }
+            if (e.key === 'Enter') { e.preventDefault(); confirmNewCategory(); }
             if (e.key === 'Escape') {
                 newCatSelect.value = 'General';
-                newCatInput.style.display = 'none';
+                if (newCatRow) newCatRow.style.display = 'none';
                 newCatInput.value = '';
             }
         });
+    }
+
+    if (newCatConfirmBtn) {
+        newCatConfirmBtn.addEventListener('click', confirmNewCategory);
     }
 
     // Settings: clear data

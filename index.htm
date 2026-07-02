@@ -108,7 +108,10 @@
 
                     <button id="add-list-btn">Create List</button>
                 </div>
-                <input type="text" id="new-category-input" placeholder="Type new category name and press Enter" style="display:none; margin-top:8px; width:100%; padding:9px 12px; border:1px solid var(--brand); border-radius:6px; font-size:0.95rem; font-family:inherit; background:var(--surface); color:var(--text);" />
+                <div id="new-category-row" style="display:none; margin-top:8px; display:none; gap:8px;" class="add-form">
+                    <input type="text" id="new-category-input" placeholder="Type new category name" />
+                    <button type="button" id="new-category-confirm-btn">Add</button>
+                </div>
             </div>
 
             <!-- LIST SELECTOR -->
