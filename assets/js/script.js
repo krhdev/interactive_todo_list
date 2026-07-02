@@ -803,22 +803,24 @@ document.addEventListener('DOMContentLoaded', async function () {
             }
         });
 
-        // When user types a new category and presses Enter, add it to the select
         newCatInput.addEventListener('keydown', e => {
             if (e.key === 'Enter') {
+                e.preventDefault(); // stop addList() firing
                 const val = newCatInput.value.trim();
                 if (!val) return;
-                // Check not already in list
+                // Add to select if not already there
                 const exists = Array.from(newCatSelect.options).find(o => o.value === val);
                 if (!exists) {
                     const opt = document.createElement('option');
                     opt.value = val; opt.textContent = val;
-                    // Insert before the + New option
                     newCatSelect.insertBefore(opt, newCatSelect.lastElementChild);
                 }
+                // Select the new value so addList() picks it up correctly
                 newCatSelect.value = val;
                 newCatInput.style.display = 'none';
                 newCatInput.value = '';
+                // Focus the list name input ready to type
+                document.getElementById('new-list')?.focus();
             }
             if (e.key === 'Escape') {
                 newCatSelect.value = 'General';
