@@ -1050,3 +1050,46 @@ body, html {
 .list-tab.active .list-tab-count {
     background: rgba(255,255,255,0.25);
 }
+
+/* ── Move task ── */
+.btn-move {
+    padding: 4px 10px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-family: inherit;
+    flex-shrink: 0;
+    background: var(--btn-secondary-bg);
+    color: var(--btn-secondary-color);
+    transition: background 0.15s;
+}
+
+.btn-move:hover { background: var(--btn-secondary-hover); }
+
+.move-select {
+    padding: 4px 8px;
+    border: 1px solid var(--brand);
+    border-radius: 4px;
+    font-size: 0.82rem;
+    font-family: inherit;
+    background: var(--surface);
+    color: var(--text);
+    cursor: pointer;
+    max-width: 140px;
+}
+
+/* ── Drag and drop ── */
+.task-item.dragging {
+    opacity: 0.4;
+    cursor: grabbing;
+}
+
+.list-tab.drag-over {
+    outline: 2px dashed #f0a500;
+    outline-offset: 2px;
+}
+
+.task-item[draggable="true"] {
+    cursor: grab;
+}

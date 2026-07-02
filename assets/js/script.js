@@ -317,6 +317,17 @@ function renderListTabs() {
             delBtn.addEventListener('click', e => { e.stopPropagation(); deleteList(list.id); });
             btn.appendChild(delBtn);
             btn.addEventListener('click', () => { activeListId = list.id; activeView = 'all'; render(); });
+
+            // Drop target
+            btn.addEventListener('dragover', e => { e.preventDefault(); btn.classList.add('drag-over'); });
+            btn.addEventListener('dragleave', () => btn.classList.remove('drag-over'));
+            btn.addEventListener('drop', e => {
+                e.preventDefault();
+                btn.classList.remove('drag-over');
+                const todoId = e.dataTransfer.getData('text/plain');
+                if (todoId) moveTask(todoId, list.id);
+            });
+
             tabsEl.appendChild(btn);
         });
     }
@@ -388,7 +399,46 @@ function renderActiveItem(todo) {
         const deleteBtn = document.createElement('button');
         deleteBtn.className = 'btn-delete'; deleteBtn.textContent = 'Delete';
         deleteBtn.addEventListener('click', () => deleteTodo(todo.id));
-        li.appendChild(checkbox); li.appendChild(span); li.appendChild(editBtn); li.appendChild(deleteBtn);
+        // Move button — shows a select dropdown
+        const moveBtn = document.createElement('button');
+        moveBtn.className = 'btn-move';
+        moveBtn.textContent = '→';
+        moveBtn.title = 'Move to another list';
+        moveBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            // Remove any existing move select
+            const existing = li.querySelector('.move-select');
+            if (existing) { existing.remove(); return; }
+
+            const sel = document.createElement('select');
+            sel.className = 'move-select';
+            const defaultOpt = document.createElement('option');
+            defaultOpt.value = ''; defaultOpt.textContent = 'Move to...';
+            sel.appendChild(defaultOpt);
+
+            lists.filter(l => l.id !== todo.listId).forEach(l => {
+                const opt = document.createElement('option');
+                opt.value = l.id; opt.textContent = l.name;
+                sel.appendChild(opt);
+            });
+
+            sel.addEventListener('change', () => {
+                if (sel.value) moveTask(todo.id, sel.value);
+            });
+
+            li.appendChild(sel);
+            sel.focus();
+        });
+
+        li.appendChild(checkbox); li.appendChild(span); li.appendChild(editBtn); li.appendChild(moveBtn); li.appendChild(deleteBtn);
+
+        // Drag and drop
+        li.setAttribute('draggable', 'true');
+        li.addEventListener('dragstart', e => {
+            e.dataTransfer.setData('text/plain', todo.id);
+            li.classList.add('dragging');
+        });
+        li.addEventListener('dragend', () => li.classList.remove('dragging'));
     }
     return li;
 }
@@ -568,6 +618,26 @@ function renderFocusCard() {
             widget.style.display = 'none';
         };
     }
+}
+
+// ── Move task ────────────────────────────────
+async function moveTask(todoId, newListId) {
+    const todo = todos.find(t => t.id === todoId);
+    if (!todo) return;
+    const oldList = lists.find(l => l.id === todo.listId);
+    const newList = lists.find(l => l.id === newListId);
+    if (!newList || todo.listId === newListId) return;
+
+    todo.listId = newListId;
+
+    if (useCloud) {
+        await window.supabase.from('todos').update({ list_id: newListId }).eq('id', todoId);
+    } else {
+        save();
+    }
+
+    logChange(`Moved: "${todo.text}" → "${newList.name}"`);
+    render();
 }
 
 // ── Utility ───────────────────────────────────
