@@ -184,7 +184,9 @@ async function addList() {
     const duplicate = lists.find(l => normalise(l.name) === normalise(name));
     if (duplicate) { showWarning(input, `A list called "${duplicate.name}" already exists.`); input.focus(); return; }
     clearWarning(input);
-    const category = document.getElementById('new-list-category')?.value || 'General';
+    const rawCat    = document.getElementById('new-list-category')?.value || 'General';
+    const customCat = document.getElementById('new-category-input')?.value.trim();
+    const category  = (rawCat === '__new__') ? (customCat || 'General') : rawCat;
     if (useCloud) {
         const { data, error } = await supabase.from('lists').insert({ user_id: currentUser.id, name, category }).select().single();
         if (error) { console.error(error); return; }
