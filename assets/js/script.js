@@ -58,6 +58,7 @@ let nextListId = lists.length ? Math.max(...lists.map(l => l.id)) + 1 : 1;
 let nextTodoId = todos.length ? Math.max(...todos.map(t => t.id)) + 1 : 1;
 let activeListId = null;
 let activeView   = 'home';
+let focusTaskId  = localStorage.getItem('krhdev-focus-task') || null;
 
 function save() {
     localStorage.setItem('krhdev-lists', JSON.stringify(lists));
@@ -202,6 +203,7 @@ function render() {
     document.querySelectorAll('[data-view]').forEach(link => {
         link.classList.toggle('active', link.dataset.view === activeView);
     });
+    renderFocusCard();
     renderListTabs();
     renderTaskWidgets();
     renderLog();
@@ -211,34 +213,60 @@ function render() {
 function renderListTabs() {
     const tabsEl         = document.getElementById('list-tabs');
     const selectorWidget = document.getElementById('widget-list-selector');
+    const pillsEl        = document.getElementById('category-pills');
     if (!tabsEl || !selectorWidget) return;
     if (lists.length === 0) { selectorWidget.style.display = 'none'; return; }
     selectorWidget.style.display = 'block';
     tabsEl.innerHTML = '';
-    const filterEl = document.getElementById('category-filter');
-    const activeCategory = filterEl ? filterEl.value : 'All';
-    const visibleLists = activeCategory === 'All' ? lists : lists.filter(l => (l.category || 'General') === activeCategory);
-    visibleLists.forEach(list => {
-        const btn = document.createElement('button');
-        btn.className = 'list-tab' + (list.id === activeListId ? ' active' : '');
-        const nameSpan = document.createElement('span');
-        nameSpan.textContent = list.name;
-        if (list.category && list.category !== 'General') {
-            const catBadge = document.createElement('span');
-            catBadge.className = 'list-category-badge';
-            catBadge.textContent = list.category;
-            nameSpan.appendChild(catBadge);
-        }
-        btn.appendChild(nameSpan);
-        const delBtn = document.createElement('button');
-        delBtn.className = 'list-tab-delete';
-        delBtn.textContent = '✕';
-        delBtn.title = 'Delete this list';
-        delBtn.addEventListener('click', e => { e.stopPropagation(); deleteList(list.id); });
-        btn.appendChild(delBtn);
-        btn.addEventListener('click', () => { activeListId = list.id; activeView = 'all'; render(); });
-        tabsEl.appendChild(btn);
-    });
+
+    // ── Category pills ──
+    if (pillsEl) {
+        pillsEl.innerHTML = '';
+        const categories = ['All', ...new Set(lists.map(l => l.category || 'General'))];
+        const activeCat  = pillsEl.dataset.active || 'All';
+
+        categories.forEach(cat => {
+            const count = cat === 'All'
+                ? todos.filter(t => !t.done && !t.deleted).length
+                : todos.filter(t => !t.done && !t.deleted && lists.find(l => l.id === t.listId && (l.category || 'General') === cat)).length;
+
+            const pill = document.createElement('button');
+            pill.className = 'category-pill' + (activeCat === cat ? ' active' : '');
+            pill.innerHTML = `${cat} <span class="pill-count">${count}</span>`;
+            pill.addEventListener('click', () => {
+                pillsEl.dataset.active = cat;
+                renderListTabs();
+            });
+            pillsEl.appendChild(pill);
+        });
+
+        // Filter lists by active category
+        const activeCategory = activeCat;
+        const visibleLists = activeCategory === 'All' ? lists : lists.filter(l => (l.category || 'General') === activeCategory);
+
+        visibleLists.forEach(list => {
+            const taskCount = todos.filter(t => t.listId === list.id && !t.done && !t.deleted).length;
+            const btn = document.createElement('button');
+            btn.className = 'list-tab' + (list.id === activeListId ? ' active' : '');
+            const nameSpan = document.createElement('span');
+            nameSpan.textContent = list.name;
+            btn.appendChild(nameSpan);
+            if (taskCount > 0) {
+                const countBadge = document.createElement('span');
+                countBadge.className = 'list-tab-count';
+                countBadge.textContent = taskCount;
+                btn.appendChild(countBadge);
+            }
+            const delBtn = document.createElement('button');
+            delBtn.className = 'list-tab-delete';
+            delBtn.textContent = '✕';
+            delBtn.title = 'Delete this list';
+            delBtn.addEventListener('click', e => { e.stopPropagation(); deleteList(list.id); });
+            btn.appendChild(delBtn);
+            btn.addEventListener('click', () => { activeListId = list.id; activeView = 'all'; render(); });
+            tabsEl.appendChild(btn);
+        });
+    }
 }
 
 function renderTaskWidgets() {
@@ -431,6 +459,62 @@ function renderLog() {
         li.innerHTML = `${escapeHtml(entry.message)}<time>${entry.time}</time>`;
         container.appendChild(li);
     });
+}
+
+// ── Focus Task ───────────────────────────────
+function renderFocusCard() {
+    const widget = document.getElementById('widget-focus');
+    if (!widget) return;
+
+    const activeTasks = todos.filter(t => !t.done && !t.deleted);
+    if (activeTasks.length === 0) { widget.style.display = 'none'; return; }
+
+    widget.style.display = 'block';
+
+    // Restore or pick a focus task
+    let focusTask = activeTasks.find(t => String(t.id) === String(focusTaskId));
+    if (!focusTask) {
+        focusTask = activeTasks[Math.floor(Math.random() * activeTasks.length)];
+        focusTaskId = focusTask.id;
+        localStorage.setItem('krhdev-focus-task', focusTaskId);
+    }
+
+    const list = lists.find(l => l.id === focusTask.listId);
+    document.getElementById('focus-task-text').textContent = focusTask.text;
+    document.getElementById('focus-list-name').textContent = list ? list.name.toUpperCase() : '';
+
+    // Done button
+    const doneBtn = document.getElementById('focus-done-btn');
+    if (doneBtn) {
+        doneBtn.onclick = async () => {
+            await toggleDone(focusTask.id);
+            focusTaskId = null;
+            localStorage.removeItem('krhdev-focus-task');
+            renderFocusCard();
+        };
+    }
+
+    // Re-roll button
+    const rerollBtn = document.getElementById('focus-reroll-btn');
+    if (rerollBtn) {
+        rerollBtn.onclick = () => {
+            const others = activeTasks.filter(t => String(t.id) !== String(focusTaskId));
+            const next = others.length ? others[Math.floor(Math.random() * others.length)] : activeTasks[0];
+            focusTaskId = next.id;
+            localStorage.setItem('krhdev-focus-task', focusTaskId);
+            renderFocusCard();
+        };
+    }
+
+    // Clear button
+    const clearBtn = document.getElementById('focus-clear-btn');
+    if (clearBtn) {
+        clearBtn.onclick = () => {
+            focusTaskId = null;
+            localStorage.removeItem('krhdev-focus-task');
+            widget.style.display = 'none';
+        };
+    }
 }
 
 // ── Utility ───────────────────────────────────
