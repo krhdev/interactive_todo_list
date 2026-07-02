@@ -65,6 +65,58 @@ function save() {
     localStorage.setItem('krhdev-todos', JSON.stringify(todos));
 }
 
+// ── Auto-reset Daily / Weekly lists ─────────
+async function checkAndReset() {
+    const now       = new Date();
+    const todayStr  = now.toISOString().slice(0, 10); // "2026-07-02"
+    const dayOfWeek = now.getDay(); // 0 = Sunday, 1 = Monday
+
+    // ── Daily reset ──
+    const lastDaily = localStorage.getItem('krhdev-last-daily-reset');
+    if (lastDaily !== todayStr) {
+        const dailyLists = lists.filter(l => (l.category || '') === 'Daily');
+        for (const list of dailyLists) {
+            const toReset = todos.filter(t => t.listId === list.id && t.done && !t.deleted);
+            for (const todo of toReset) {
+                todo.done = false;
+                if (useCloud) {
+                    await window.supabase.from('todos').update({ done: false }).eq('id', todo.id);
+                }
+            }
+            if (toReset.length) logChange(`Daily reset: "${list.name}" — ${toReset.length} task(s) reset`);
+        }
+        localStorage.setItem('krhdev-last-daily-reset', todayStr);
+        if (!useCloud) save();
+    }
+
+    // ── Weekly reset — runs on Monday ──
+    const lastWeekly = localStorage.getItem('krhdev-last-weekly-reset');
+    const thisMonday = getThisMonday();
+    if (dayOfWeek === 1 && lastWeekly !== thisMonday) {
+        const weeklyLists = lists.filter(l => (l.category || '') === 'Weekly');
+        for (const list of weeklyLists) {
+            const toReset = todos.filter(t => t.listId === list.id && t.done && !t.deleted);
+            for (const todo of toReset) {
+                todo.done = false;
+                if (useCloud) {
+                    await window.supabase.from('todos').update({ done: false }).eq('id', todo.id);
+                }
+            }
+            if (toReset.length) logChange(`Weekly reset: "${list.name}" — ${toReset.length} task(s) reset`);
+        }
+        localStorage.setItem('krhdev-last-weekly-reset', thisMonday);
+        if (!useCloud) save();
+    }
+}
+
+function getThisMonday() {
+    const now  = new Date();
+    const day  = now.getDay();
+    const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+    const monday = new Date(now.setDate(diff));
+    return monday.toISOString().slice(0, 10);
+}
+
 // ── Supabase helpers ──────────────────────────
 async function loadFromCloud() {
     if (!useCloud) return;
@@ -74,6 +126,7 @@ async function loadFromCloud() {
     lists = (cloudLists || []).map(l => ({ id: l.id, name: l.name, category: l.category || 'General' }));
     todos = (cloudTodos || []).map(t => ({ id: t.id, listId: t.list_id, text: t.text, done: t.done, deleted: t.deleted, editing: false }));
     activeListId = lists.length ? lists[0].id : null;
+    await checkAndReset();
     render();
 }
 
@@ -736,7 +789,10 @@ document.addEventListener('DOMContentLoaded', async function () {
         activeListId = found ? found.id : lists[0].id;
     }
 
-    if (!useCloud) render();
+    if (!useCloud) {
+        await checkAndReset();
+        render();
+    }
 });
 
 // Service worker
