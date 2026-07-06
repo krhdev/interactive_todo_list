@@ -850,7 +850,18 @@ document.addEventListener('DOMContentLoaded', async function () {
 
     // Nav links
     document.querySelectorAll('[data-view]').forEach(link => {
-        link.addEventListener('click', e => { e.preventDefault(); activeView = link.dataset.view; render(); });
+        link.addEventListener('click', e => {
+            // Only intercept the click if we're on the SPA page (index.htm),
+            // where the view widgets actually exist. On other pages (help.htm,
+            // settings.htm) let the browser navigate to index.htm normally —
+            // the #view hash on the link tells index.htm which view to open.
+            const onIndexPage = document.getElementById('widget-list-selector');
+            if (onIndexPage) {
+                e.preventDefault();
+                activeView = link.dataset.view;
+                render();
+            }
+        });
     });
 
     // Main inputs
@@ -907,6 +918,11 @@ document.addEventListener('DOMContentLoaded', async function () {
         const found = lastActive && lists.find(l => l.id === parseInt(lastActive));
         activeListId = found ? found.id : lists[0].id;
     }
+
+    // Read the requested view from the URL hash (e.g. index.htm#completed),
+    // so links from help.htm / settings.htm land on the right view.
+    const hashView = window.location.hash.replace('#', '');
+    if (hashView && viewTitles[hashView]) activeView = hashView;
 
     if (!useCloud) {
         await checkAndReset();

@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 
@@ -26,18 +27,29 @@
 <body>
 
     <div class="container">
-        <div class="sidebar">
-            <h2 id="sidebar-title">KRHDev's To Do List</h2>
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <img src="./assets/images/todo-icon-192x192.png" alt="KRHDev To Do List icon">
+                <h2 id="sidebar-title" data-suffix="app">KRHDev's To Do List</h2>
+                <button class="hamburger" id="sidebar-toggle" aria-label="Close menu">✕</button>
+            </div>
             <ul>
-                <li><a href="index.htm">View Lists</a></li>
-                <li><a href="index.htm">View Completed</a></li>
-                <li><a href="index.htm">View Deleted</a></li>
-                <li><a href="help.htm">Help</a></li>
+                <li><a href="index.htm#home" data-view="home">Home</a></li>
+                <li><a href="index.htm#all" data-view="all">View Lists</a></li>
+                <li><a href="index.htm#completed" data-view="completed">View Completed</a></li>
+                <li><a href="index.htm#deleted" data-view="deleted">View Deleted</a></li>
+                <li><a href="index.htm#log" data-view="log">Recent Changes</a></li>
                 <li><a href="settings.htm" class="active">Settings</a></li>
+                <li><a href="help.htm">Help</a></li>
             </ul>
         </div>
 
         <div class="main-content">
+            <div class="mobile-topbar">
+                <button class="hamburger" id="sidebar-open" aria-label="Open menu">☰</button>
+                <span class="mobile-title" id="mobile-title">KRHDev's To Do List</span>
+            </div>
+
             <h1 id="page-title">Settings</h1>
 
             <!-- PERSONALISATION -->

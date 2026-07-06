@@ -33,11 +33,11 @@
                 <button class="hamburger" id="sidebar-toggle" aria-label="Close menu">✕</button>
             </div>
             <ul>
-                <li><a href="index.htm" data-view="home">Home</a></li>
-                <li><a href="index.htm" data-view="all">View Lists</a></li>
-                <li><a href="index.htm" data-view="completed">View Completed</a></li>
-                <li><a href="index.htm" data-view="deleted">View Deleted</a></li>
-                <li><a href="index.htm" data-view="log">Recent Changes</a></li>
+                <li><a href="index.htm#home" data-view="home">Home</a></li>
+                <li><a href="index.htm#all" data-view="all">View Lists</a></li>
+                <li><a href="index.htm#completed" data-view="completed">View Completed</a></li>
+                <li><a href="index.htm#deleted" data-view="deleted">View Deleted</a></li>
+                <li><a href="index.htm#log" data-view="log">Recent Changes</a></li>
                 <li><a href="settings.htm">Settings</a></li>
                 <li><a href="help.htm" class="active">Help</a></li>
             </ul>
@@ -57,8 +57,8 @@
                 <details class="help-section" open>
                     <summary>Where is my data saved?</summary>
                     <div class="help-body">
-                        <p>Your lists and tasks are saved <strong>on this device only</strong>, inside your browser. Nothing is sent to a server or stored online.</p>
-                        <p>This means:</p>
+                        <p>Your lists and tasks are saved <strong>on this device only</strong>, inside your browser — unless you choose to sign in, in which case they're saved securely to your account instead. See "Signing in and syncing across devices" below.</p>
+                        <p>If you're not signed in, this means:</p>
                         <ul>
                             <li>Your data on your phone is separate from your data on your laptop.</li>
                             <li>If you open the app in a different browser on the same device, your lists won't be there.</li>
@@ -69,6 +69,22 @@
                 </details>
 
                 <!-- 2 -->
+                <details class="help-section">
+                    <summary>Signing in and syncing across devices</summary>
+                    <div class="help-body">
+                        <p>By default your lists are stored only on this device. If you'd like your lists available on your phone, laptop, and any other device, you can create an account and sign in.</p>
+                        <ul>
+                            <li>On opening the app, you'll see a sign-in card. Choose <strong>Sign Up</strong> if you're new, or <strong>Sign In</strong> if you already have an account.</li>
+                            <li>Enter your email and a password, then confirm your email if signing up for the first time.</li>
+                            <li>Once signed in, your lists and tasks are saved to your account and will appear on any device you sign into.</li>
+                            <li>Don't want to sign in? Click <strong>Skip</strong> to keep using the app with on-device storage only.</li>
+                            <li>To sign out, use the <strong>Sign out</strong> button that appears in the sidebar next to your email.</li>
+                        </ul>
+                        <div class="tip"><strong>Note:</strong> Local (device-only) data and cloud (signed-in) data are kept separate. Switching between them won't merge your lists automatically — export first if you want to combine them.</div>
+                    </div>
+                </details>
+
+                <!-- 3 -->
                 <details class="help-section">
                     <summary>How do I use lists?</summary>
                     <div class="help-body">
@@ -82,7 +98,49 @@
                     </div>
                 </details>
 
-                <!-- 3 -->
+                <!-- 4 -->
+                <details class="help-section">
+                    <summary>How do categories work?</summary>
+                    <div class="help-body">
+                        <p>Categories let you group your lists together — for example, Work, Personal, Daily, or Weekly.</p>
+                        <ul>
+                            <li>When creating a new list, choose a category from the dropdown, or select <strong>+ New Category</strong> to type your own.</li>
+                            <li>Use the category pills above your lists to filter which lists are shown. Click <strong>All</strong> to see everything.</li>
+                            <li>Each pill shows a count of how many lists are in that category.</li>
+                        </ul>
+                        <div class="tip"><strong>Tip:</strong> Lists in the <strong>Daily</strong> or <strong>Weekly</strong> categories get special treatment — see the next section.</div>
+                    </div>
+                </details>
+
+                <!-- 5 -->
+                <details class="help-section">
+                    <summary>Daily and Weekly list auto-reset</summary>
+                    <div class="help-body">
+                        <p>If you set a list's category to <strong>Daily</strong> or <strong>Weekly</strong>, completed tasks in that list will automatically be marked as active again — no need to manually untick them.</p>
+                        <ul>
+                            <li><strong>Daily</strong> lists reset once every day, the first time you open the app that day.</li>
+                            <li><strong>Weekly</strong> lists reset every Monday.</li>
+                            <li>Resets are recorded in <strong>Recent Changes</strong> so you can see what happened.</li>
+                        </ul>
+                        <div class="tip"><strong>Tip:</strong> Great for routines — a "Daily" list for habits, or a "Weekly" list for chores.</div>
+                    </div>
+                </details>
+
+                <!-- 6 -->
+                <details class="help-section">
+                    <summary>What is the Focus Task of the Day?</summary>
+                    <div class="help-body">
+                        <p>The Focus Task card highlights one active task at a time, to help you concentrate on a single thing.</p>
+                        <ul>
+                            <li>A task is picked automatically from your active tasks.</li>
+                            <li>Click <strong>Done</strong> to complete it and clear the card, or the re-roll button to pick a different task.</li>
+                            <li>Use the clear button to dismiss the card without completing anything.</li>
+                            <li>If you have no active tasks, the card hides itself automatically.</li>
+                        </ul>
+                    </div>
+                </details>
+
+                <!-- 7 -->
                 <details class="help-section">
                     <summary>How do I manage tasks?</summary>
                     <div class="help-body">
@@ -98,7 +156,19 @@
                     </div>
                 </details>
 
-                <!-- 4 -->
+                <!-- 8 -->
+                <details class="help-section">
+                    <summary>How do I move a task to a different list?</summary>
+                    <div class="help-body">
+                        <p>There are two ways to move a task from one list to another:</p>
+                        <ul>
+                            <li><strong>Move button:</strong> Click the <strong>→</strong> button on a task, then choose the destination list from the dropdown.</li>
+                            <li><strong>Drag and drop:</strong> Drag a task and drop it onto a different list tab to move it there directly.</li>
+                        </ul>
+                    </div>
+                </details>
+
+                <!-- 9 -->
                 <details class="help-section">
                     <summary>How do I back up my lists? (Export)</summary>
                     <div class="help-body">
@@ -112,7 +182,7 @@
                     </div>
                 </details>
 
-                <!-- 5 -->
+                <!-- 10 -->
                 <details class="help-section">
                     <summary>How do I restore or move my lists? (Import)</summary>
                     <div class="help-body">
@@ -129,7 +199,7 @@
                     </div>
                 </details>
 
-                <!-- 6 -->
+                <!-- 11 -->
                 <details class="help-section">
                     <summary>How do I use this on my phone or install it?</summary>
                     <div class="help-body">
@@ -140,11 +210,11 @@
                             <li><strong>Desktop (Chrome or Edge):</strong> Look for an install icon at the right end of the address bar.</li>
                         </ul>
                         <p>Once installed, the app opens in its own window without the browser around it, and works offline.</p>
-                        <div class="tip"><strong>Note:</strong> Installing the app on your phone does not sync data with any other device. Your lists are still stored on that device only.</div>
+                        <div class="tip"><strong>Note:</strong> Installing the app on your phone does not sync data with any other device unless you're signed in. Your lists are still stored on that device only when using local storage.</div>
                     </div>
                 </details>
 
-                <!-- 7 -->
+                <!-- 12 -->
                 <details class="help-section">
                     <summary>Light and dark mode</summary>
                     <div class="help-body">
@@ -152,7 +222,7 @@
                     </div>
                 </details>
 
-                <!-- 8 -->
+                <!-- 13 -->
                 <details class="help-section">
                     <summary>Can I personalise the app with my name?</summary>
                     <div class="help-body">
@@ -165,7 +235,7 @@
                     </div>
                 </details>
 
-                <!-- 9 -->
+                <!-- 14 -->
                 <details class="help-section">
                     <summary>How do I clear all my data?</summary>
                     <div class="help-body">
