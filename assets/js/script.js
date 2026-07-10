@@ -52,7 +52,6 @@ let lists = JSON.parse(localStorage.getItem('krhdev-lists') || '[]');
 let todos = JSON.parse(localStorage.getItem('krhdev-todos') || '[]');
 
 todos = todos.filter(t => t.listId !== undefined);
-todos.forEach(t => { if (t.parentId === undefined) t.parentId = null; });
 localStorage.setItem('krhdev-todos', JSON.stringify(todos));
 
 let nextListId = lists.length ? Math.max(...lists.map(l => l.id)) + 1 : 1;
@@ -125,8 +124,9 @@ async function loadFromCloud() {
     const { data: cloudTodos, error: te } = await supabase.from('todos').select('*').order('created_at');
     if (le || te) { console.error('Cloud load error', le || te); return; }
     lists = (cloudLists || []).map(l => ({ id: l.id, name: l.name, category: l.category || 'General' }));
-    todos = (cloudTodos || []).map(t => ({ id: t.id, listId: t.list_id, parentId: t.parent_id, text: t.text, done: t.done, deleted: t.deleted, editing: false }));
+    todos = (cloudTodos || []).map(t => ({ id: t.id, listId: t.list_id, text: t.text, done: t.done, deleted: t.deleted, editing: false }));
     activeListId = lists.length ? lists[0].id : null;
+    activeView = lists.length ? 'all' : 'home';
     await checkAndReset();
     render();
 }
@@ -236,60 +236,17 @@ async function addTodo() {
     if (duplicate) { showWarning(input, 'That task already exists in this list.'); input.focus(); return; }
     clearWarning(input);
     if (useCloud) {
-        const { data, error } = await supabase.from('todos').insert({ user_id: currentUser.id, list_id: activeListId, parent_id: null, text, done: false, deleted: false }).select().single();
+        const { data, error } = await supabase.from('todos').insert({ user_id: currentUser.id, list_id: activeListId, text, done: false, deleted: false }).select().single();
         if (error) { console.error(error); return; }
-        todos.push({ id: data.id, listId: data.list_id, parentId: data.parent_id, text: data.text, done: false, deleted: false, editing: false });
+        todos.push({ id: data.id, listId: data.list_id, text: data.text, done: false, deleted: false, editing: false });
     } else {
-        const todo = { id: nextTodoId++, listId: activeListId, parentId: null, text, done: false, deleted: false, editing: false };
+        const todo = { id: nextTodoId++, listId: activeListId, text, done: false, deleted: false, editing: false };
         todos.push(todo);
         save();
     }
     logChange(`Added: "${text}"`);
     input.value = '';
     render();
-}
-
-// ── CREATE — Subtask (one level deep) ─────────
-async function addSubtask(parentId, text) {
-    const parent = todos.find(t => t.id === parentId);
-    if (!parent) return;
-    const trimmed = text.trim();
-    if (!trimmed) return;
-    if (trimmed.length > 200) return;
-    const siblings = todos.filter(t => t.parentId === parentId && !t.deleted);
-    const duplicate = siblings.find(t => normalise(t.text) === normalise(trimmed));
-    if (duplicate) return;
-    if (useCloud) {
-        const { data, error } = await supabase.from('todos').insert({ user_id: currentUser.id, list_id: parent.listId, parent_id: parentId, text: trimmed, done: false, deleted: false }).select().single();
-        if (error) { console.error(error); return; }
-        todos.push({ id: data.id, listId: data.list_id, parentId: data.parent_id, text: data.text, done: false, deleted: false, editing: false });
-    } else {
-        const sub = { id: nextTodoId++, listId: parent.listId, parentId, text: trimmed, done: false, deleted: false, editing: false };
-        todos.push(sub);
-        save();
-    }
-    logChange(`Added subtask: "${trimmed}" under "${parent.text}"`);
-    syncParentCompletion(parentId);
-    render();
-}
-
-// ── Keep parent completion in sync with its subtasks ──
-function syncParentCompletion(parentId) {
-    if (!parentId) return;
-    const parent = todos.find(t => t.id === parentId);
-    if (!parent) return;
-    const subtasks = todos.filter(t => t.parentId === parentId && !t.deleted);
-    if (subtasks.length === 0) return;
-    const allDone = subtasks.every(t => t.done);
-    if (allDone && !parent.done) {
-        parent.done = true;
-        if (useCloud) { supabase.from('todos').update({ done: true }).eq('id', parent.id); } else { save(); }
-        logChange(`Auto-completed: "${parent.text}" (all subtasks done)`);
-    } else if (!allDone && parent.done) {
-        parent.done = false;
-        if (useCloud) { supabase.from('todos').update({ done: false }).eq('id', parent.id); } else { save(); }
-        logChange(`Reopened: "${parent.text}" (subtask marked incomplete)`);
-    }
 }
 
 // ── READ (render) ─────────────────────────────
@@ -396,8 +353,8 @@ function renderTaskWidgets() {
     const activeList = lists.find(l => l.id === activeListId);
     if (label && activeList) label.textContent = `— ${activeList.name}`;
     const listTodos = todos.filter(t => t.listId === activeListId);
-    renderActiveTaskList('list-container',           'empty-active',    listTodos.filter(t => !t.done && !t.deleted && !t.parentId));
-    renderActiveTaskList('completed-list-container', 'empty-completed', listTodos.filter(t => t.done && !t.deleted && !t.parentId));
+    renderList('list-container',           'empty-active',    listTodos.filter(t => !t.done && !t.deleted), renderActiveItem);
+    renderList('completed-list-container', 'empty-completed', listTodos.filter(t => t.done && !t.deleted),  renderCompletedItem);
     renderList('deleted-list-container',   'empty-deleted',   listTodos.filter(t => t.deleted),             renderDeletedItem);
     const clearBtn = document.getElementById('clear-deleted-btn');
     if (clearBtn) clearBtn.style.display = listTodos.some(t => t.deleted) ? 'inline-block' : 'none';
@@ -411,95 +368,6 @@ function renderList(listId, emptyId, items, itemRenderer) {
     list.className = 'task-list';
     if (empty) empty.style.display = items.length ? 'none' : 'block';
     items.forEach(todo => list.appendChild(itemRenderer(todo)));
-}
-
-// Renders top-level tasks (active or completed) each followed by their
-// own subtask checklist. Picks the active or completed row renderer
-// automatically based on the task's done state.
-function renderActiveTaskList(containerId, emptyId, topLevelTasks) {
-    const list  = document.getElementById(containerId);
-    const empty = document.getElementById(emptyId);
-    if (!list) return;
-    list.innerHTML = '';
-    list.className = 'task-list';
-    if (empty) empty.style.display = topLevelTasks.length ? 'none' : 'block';
-    topLevelTasks.forEach(todo => {
-        const itemRenderer = todo.done ? renderCompletedItem : renderActiveItem;
-        list.appendChild(itemRenderer(todo));
-        list.appendChild(renderSubtaskContainer(todo));
-    });
-}
-
-function renderSubtaskContainer(todo) {
-    const li = document.createElement('li');
-    li.className = 'subtask-container';
-
-    const subtasks = todos.filter(t => t.parentId === todo.id && !t.deleted);
-    if (subtasks.length) {
-        const subUl = document.createElement('ul');
-        subUl.className = 'subtask-list';
-        subtasks.forEach(sub => subUl.appendChild(renderSubtaskItem(sub)));
-        li.appendChild(subUl);
-    }
-
-    const addBtn = document.createElement('button');
-    addBtn.className = 'btn-add-subtask';
-    addBtn.textContent = '+ Add subtask';
-    addBtn.addEventListener('click', () => {
-        const existingRow = li.querySelector('.subtask-input-row');
-        if (existingRow) { existingRow.querySelector('input').focus(); return; }
-
-        const row = document.createElement('div');
-        row.className = 'subtask-input-row';
-        const input = document.createElement('input');
-        input.type = 'text';
-        input.className = 'subtask-input';
-        input.placeholder = 'Subtask...';
-        input.maxLength = 200;
-        const saveBtn = document.createElement('button');
-        saveBtn.className = 'btn-save';
-        saveBtn.textContent = 'Add';
-        const cancelBtn = document.createElement('button');
-        cancelBtn.className = 'btn-cancel';
-        cancelBtn.textContent = 'Cancel';
-
-        const submit = () => {
-            const text = input.value.trim();
-            if (!text) { showWarning(input, 'Please enter a subtask.'); return; }
-            addSubtask(todo.id, text);
-        };
-        saveBtn.addEventListener('click', submit);
-        cancelBtn.addEventListener('click', () => row.remove());
-        input.addEventListener('keydown', e => {
-            if (e.key === 'Enter') submit();
-            if (e.key === 'Escape') row.remove();
-        });
-
-        row.appendChild(input); row.appendChild(saveBtn); row.appendChild(cancelBtn);
-        li.appendChild(row);
-        input.focus();
-    });
-    li.appendChild(addBtn);
-
-    return li;
-}
-
-function renderSubtaskItem(sub) {
-    const li = document.createElement('li');
-    li.className = 'subtask-item' + (sub.done ? ' done' : '');
-    const checkbox = document.createElement('input');
-    checkbox.type = 'checkbox';
-    checkbox.checked = sub.done;
-    checkbox.addEventListener('change', () => toggleDone(sub.id));
-    const span = document.createElement('span');
-    span.className = 'subtask-text';
-    span.textContent = sub.text;
-    const deleteBtn = document.createElement('button');
-    deleteBtn.className = 'btn-delete';
-    deleteBtn.textContent = 'Delete';
-    deleteBtn.addEventListener('click', () => deleteTodo(sub.id));
-    li.appendChild(checkbox); li.appendChild(span); li.appendChild(deleteBtn);
-    return li;
 }
 
 // ── Item renderers ────────────────────────────
@@ -610,7 +478,6 @@ async function toggleDone(id) {
     todo.done = !todo.done;
     if (useCloud) { await supabase.from('todos').update({ done: todo.done }).eq('id', id); } else { save(); }
     logChange(todo.done ? `Completed: "${todo.text}"` : `Reopened: "${todo.text}"`);
-    if (todo.parentId) syncParentCompletion(todo.parentId);
     render();
 }
 
@@ -641,14 +508,8 @@ async function deleteTodo(id) {
     const todo = todos.find(t => t.id === id);
     if (!todo) return;
     todo.deleted = true; todo.done = false; todo.editing = false;
-    const childSubtasks = todos.filter(t => t.parentId === id && !t.deleted);
-    childSubtasks.forEach(t => { t.deleted = true; t.done = false; });
-    if (useCloud) {
-        await supabase.from('todos').update({ deleted: true, done: false }).eq('id', id);
-        for (const s of childSubtasks) { await supabase.from('todos').update({ deleted: true, done: false }).eq('id', s.id); }
-    } else { save(); }
-    logChange(`Deleted: "${todo.text}"` + (childSubtasks.length ? ` (and ${childSubtasks.length} subtask(s))` : ''));
-    if (todo.parentId) syncParentCompletion(todo.parentId);
+    if (useCloud) { await supabase.from('todos').update({ deleted: true, done: false }).eq('id', id); } else { save(); }
+    logChange(`Deleted: "${todo.text}"`);
     render();
 }
 
@@ -658,7 +519,6 @@ async function restoreTodo(id) {
     todo.deleted = false;
     if (useCloud) { await supabase.from('todos').update({ deleted: false }).eq('id', id); } else { save(); }
     logChange(`Restored: "${todo.text}"`);
-    if (todo.parentId) syncParentCompletion(todo.parentId);
     render();
 }
 
@@ -772,17 +632,14 @@ async function moveTask(todoId, newListId) {
     if (!newList || todo.listId === newListId) return;
 
     todo.listId = newListId;
-    const subtasks = todos.filter(t => t.parentId === todo.id);
-    subtasks.forEach(t => { t.listId = newListId; });
 
     if (useCloud) {
         await window.supabase.from('todos').update({ list_id: newListId }).eq('id', todoId);
-        for (const s of subtasks) { await window.supabase.from('todos').update({ list_id: newListId }).eq('id', s.id); }
     } else {
         save();
     }
 
-    logChange(`Moved: "${todo.text}"` + (subtasks.length ? ` (with ${subtasks.length} subtask(s))` : '') + ` → "${newList.name}"`);
+    logChange(`Moved: "${todo.text}" → "${newList.name}"`);
     render();
 }
 
@@ -994,18 +851,7 @@ document.addEventListener('DOMContentLoaded', async function () {
 
     // Nav links
     document.querySelectorAll('[data-view]').forEach(link => {
-        link.addEventListener('click', e => {
-            // Only intercept the click if we're on the SPA page (index.htm),
-            // where the view widgets actually exist. On other pages (help.htm,
-            // settings.htm) let the browser navigate to index.htm normally —
-            // the #view hash on the link tells index.htm which view to open.
-            const onIndexPage = document.getElementById('widget-list-selector');
-            if (onIndexPage) {
-                e.preventDefault();
-                activeView = link.dataset.view;
-                render();
-            }
-        });
+        link.addEventListener('click', e => { e.preventDefault(); activeView = link.dataset.view; render(); });
     });
 
     // Main inputs
@@ -1062,11 +908,6 @@ document.addEventListener('DOMContentLoaded', async function () {
         const found = lastActive && lists.find(l => l.id === parseInt(lastActive));
         activeListId = found ? found.id : lists[0].id;
     }
-
-    // Read the requested view from the URL hash (e.g. index.htm#completed),
-    // so links from help.htm / settings.htm land on the right view.
-    const hashView = window.location.hash.replace('#', '');
-    if (hashView && viewTitles[hashView]) activeView = hashView;
 
     if (!useCloud) {
         await checkAndReset();
