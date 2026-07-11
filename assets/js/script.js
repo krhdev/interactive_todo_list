@@ -512,15 +512,15 @@ function renderActiveItem(todo) {
         const span = document.createElement('span');
         span.className = 'task-text'; span.textContent = todo.text;
 
-        // Subtask progress indicator — appended after span, not inside it
+        // Subtask progress indicator
         const subtasks = todos.filter(t => t.parentId === todo.id && !t.deleted);
         if (subtasks.length > 0) {
             const done = subtasks.filter(t => t.done).length;
             const prog = document.createElement('span');
             prog.className = 'subtask-progress';
             prog.textContent = `${done}/${subtasks.length}`;
-            // Insert after span so there's a clear gap
-            span.insertAdjacentElement('afterend', prog);
+            span.textContent = todo.text + ' ';
+            span.appendChild(prog);
         }
 
         const editBtn = document.createElement('button');
