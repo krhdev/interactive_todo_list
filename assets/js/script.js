@@ -3,6 +3,7 @@
 //  CRUD: Create · Read · Update · Delete
 //  Features: Named lists · Light/Dark mode · Mobile friendly
 //             Change log · Local storage · Supabase cloud sync
+//             Subtasks · Category filter · Focus task · Auto-reset
 //  Validation: Empty input blocked · Warnings shown · Duplicate prevention
 // ─────────────────────────────────────────────
 
@@ -68,20 +69,17 @@ function save() {
 // ── Auto-reset Daily / Weekly lists ─────────
 async function checkAndReset() {
     const now       = new Date();
-    const todayStr  = now.toISOString().slice(0, 10); // "2026-07-02"
-    const dayOfWeek = now.getDay(); // 0 = Sunday, 1 = Monday
+    const todayStr  = now.toISOString().slice(0, 10);
+    const dayOfWeek = now.getDay();
 
-    // ── Daily reset ──
     const lastDaily = localStorage.getItem('krhdev-last-daily-reset');
     if (lastDaily !== todayStr) {
         const dailyLists = lists.filter(l => (l.category || '') === 'Daily');
         for (const list of dailyLists) {
-            const toReset = todos.filter(t => t.listId === list.id && t.done && !t.deleted);
+            const toReset = todos.filter(t => t.listId === list.id && t.done && !t.deleted && !t.parentId);
             for (const todo of toReset) {
                 todo.done = false;
-                if (useCloud) {
-                    await window.supabase.from('todos').update({ done: false }).eq('id', todo.id);
-                }
+                if (useCloud) await window.supabase.from('todos').update({ done: false }).eq('id', todo.id);
             }
             if (toReset.length) logChange(`Daily reset: "${list.name}" — ${toReset.length} task(s) reset`);
         }
@@ -89,18 +87,15 @@ async function checkAndReset() {
         if (!useCloud) save();
     }
 
-    // ── Weekly reset — runs on Monday ──
     const lastWeekly = localStorage.getItem('krhdev-last-weekly-reset');
     const thisMonday = getThisMonday();
     if (dayOfWeek === 1 && lastWeekly !== thisMonday) {
         const weeklyLists = lists.filter(l => (l.category || '') === 'Weekly');
         for (const list of weeklyLists) {
-            const toReset = todos.filter(t => t.listId === list.id && t.done && !t.deleted);
+            const toReset = todos.filter(t => t.listId === list.id && t.done && !t.deleted && !t.parentId);
             for (const todo of toReset) {
                 todo.done = false;
-                if (useCloud) {
-                    await window.supabase.from('todos').update({ done: false }).eq('id', todo.id);
-                }
+                if (useCloud) await window.supabase.from('todos').update({ done: false }).eq('id', todo.id);
             }
             if (toReset.length) logChange(`Weekly reset: "${list.name}" — ${toReset.length} task(s) reset`);
         }
@@ -120,13 +115,22 @@ function getThisMonday() {
 // ── Supabase helpers ──────────────────────────
 async function loadFromCloud() {
     if (!useCloud) return;
-    const { data: cloudLists, error: le } = await supabase.from('lists').select('*').order('created_at');
-    const { data: cloudTodos, error: te } = await supabase.from('todos').select('*').order('created_at');
+    const { data: cloudLists, error: le } = await window.supabase.from('lists').select('*').order('created_at');
+    const { data: cloudTodos, error: te } = await window.supabase.from('todos').select('*').order('created_at');
     if (le || te) { console.error('Cloud load error', le || te); return; }
     lists = (cloudLists || []).map(l => ({ id: l.id, name: l.name, category: l.category || 'General' }));
-    todos = (cloudTodos || []).map(t => ({ id: t.id, listId: t.list_id, text: t.text, done: t.done, deleted: t.deleted, editing: false }));
+    // Map all todos including subtasks (parent_id present = subtask)
+    todos = (cloudTodos || []).map(t => ({
+        id:       t.id,
+        listId:   t.list_id,
+        parentId: t.parent_id || null,
+        text:     t.text,
+        done:     t.done,
+        deleted:  t.deleted,
+        editing:  false
+    }));
     activeListId = lists.length ? lists[0].id : null;
-    activeView = lists.length ? 'all' : 'home';
+    activeView   = lists.length ? 'all' : 'home';
     await checkAndReset();
     render();
 }
@@ -189,7 +193,7 @@ async function addList() {
     const customCat = document.getElementById('new-category-input')?.value.trim();
     const category  = (rawCat === '__new__') ? (customCat || 'General') : rawCat;
     if (useCloud) {
-        const { data, error } = await supabase.from('lists').insert({ user_id: currentUser.id, name, category }).select().single();
+        const { data, error } = await window.supabase.from('lists').insert({ user_id: currentUser.id, name, category }).select().single();
         if (error) { console.error(error); return; }
         lists.push({ id: data.id, name: data.name, category: data.category });
         activeListId = data.id;
@@ -211,7 +215,7 @@ async function deleteList(id) {
     if (!list) return;
     if (!confirm(`Delete the list "${list.name}" and all its tasks?`)) return;
     if (useCloud) {
-        await supabase.from('lists').delete().eq('id', id);
+        await window.supabase.from('lists').delete().eq('id', id);
     } else {
         todos = todos.filter(t => t.listId !== id);
         save();
@@ -231,21 +235,72 @@ async function addTodo() {
     const text = input.value.trim();
     if (!text) { showWarning(input, 'Please enter a task.'); input.focus(); return; }
     if (text.length > 200) { showWarning(input, 'Task must be 200 characters or fewer.'); input.focus(); return; }
-    const activeTasks = todos.filter(t => t.listId === activeListId && !t.deleted);
+    const activeTasks = todos.filter(t => t.listId === activeListId && !t.deleted && !t.parentId);
     const duplicate = activeTasks.find(t => normalise(t.text) === normalise(text));
     if (duplicate) { showWarning(input, 'That task already exists in this list.'); input.focus(); return; }
     clearWarning(input);
     if (useCloud) {
-        const { data, error } = await supabase.from('todos').insert({ user_id: currentUser.id, list_id: activeListId, text, done: false, deleted: false }).select().single();
+        const { data, error } = await window.supabase.from('todos').insert({ user_id: currentUser.id, list_id: activeListId, text, done: false, deleted: false, parent_id: null }).select().single();
         if (error) { console.error(error); return; }
-        todos.push({ id: data.id, listId: data.list_id, text: data.text, done: false, deleted: false, editing: false });
+        todos.push({ id: data.id, listId: data.list_id, parentId: null, text: data.text, done: false, deleted: false, editing: false });
     } else {
-        const todo = { id: nextTodoId++, listId: activeListId, text, done: false, deleted: false, editing: false };
+        const todo = { id: nextTodoId++, listId: activeListId, parentId: null, text, done: false, deleted: false, editing: false };
         todos.push(todo);
         save();
     }
     logChange(`Added: "${text}"`);
     input.value = '';
+    render();
+}
+
+// ── CREATE — Subtask ──────────────────────────
+async function addSubtask(parentId, text) {
+    if (!text) return;
+    const parent = todos.find(t => t.id === parentId);
+    if (!parent) return;
+    if (useCloud) {
+        const { data, error } = await window.supabase.from('todos').insert({
+            user_id:   currentUser.id,
+            list_id:   parent.listId,
+            parent_id: parentId,
+            text,
+            done:      false,
+            deleted:   false
+        }).select().single();
+        if (error) { console.error(error); return; }
+        todos.push({ id: data.id, listId: data.list_id, parentId: data.parent_id, text: data.text, done: false, deleted: false, editing: false });
+    } else {
+        const subtask = { id: nextTodoId++, listId: parent.listId, parentId, text, done: false, deleted: false, editing: false };
+        todos.push(subtask);
+        save();
+    }
+    logChange(`Added subtask: "${text}"`);
+    render();
+}
+
+// ── TOGGLE — Subtask ──────────────────────────
+async function toggleSubtask(id) {
+    const subtask = todos.find(t => t.id === id);
+    if (!subtask) return;
+    subtask.done = !subtask.done;
+    if (useCloud) {
+        await window.supabase.from('todos').update({ done: subtask.done }).eq('id', id);
+    } else {
+        save();
+    }
+    render();
+}
+
+// ── DELETE — Subtask ──────────────────────────
+async function deleteSubtask(id) {
+    const subtask = todos.find(t => t.id === id);
+    if (!subtask) return;
+    if (useCloud) {
+        await window.supabase.from('todos').delete().eq('id', id);
+    }
+    todos = todos.filter(t => t.id !== id);
+    if (!useCloud) save();
+    logChange(`Removed subtask: "${subtask.text}"`);
     render();
 }
 
@@ -275,7 +330,6 @@ function renderListTabs() {
     selectorWidget.style.display = 'block';
     tabsEl.innerHTML = '';
 
-    // ── Category pills ──
     if (pillsEl) {
         pillsEl.innerHTML = '';
         const categories = ['All', ...new Set(lists.map(l => l.category || 'General'))];
@@ -285,23 +339,17 @@ function renderListTabs() {
             const count = cat === 'All'
                 ? lists.length
                 : lists.filter(l => (l.category || 'General') === cat).length;
-
             const pill = document.createElement('button');
             pill.className = 'category-pill' + (activeCat === cat ? ' active' : '');
             pill.innerHTML = `${cat} <span class="pill-count">${count}</span>`;
-            pill.addEventListener('click', () => {
-                pillsEl.dataset.active = cat;
-                renderListTabs();
-            });
+            pill.addEventListener('click', () => { pillsEl.dataset.active = cat; renderListTabs(); });
             pillsEl.appendChild(pill);
         });
 
-        // Filter lists by active category
-        const activeCategory = activeCat;
-        const visibleLists = activeCategory === 'All' ? lists : lists.filter(l => (l.category || 'General') === activeCategory);
+        const visibleLists = activeCat === 'All' ? lists : lists.filter(l => (l.category || 'General') === activeCat);
 
         visibleLists.forEach(list => {
-            const taskCount = todos.filter(t => t.listId === list.id && !t.done && !t.deleted).length;
+            const taskCount = todos.filter(t => t.listId === list.id && !t.done && !t.deleted && !t.parentId).length;
             const btn = document.createElement('button');
             btn.className = 'list-tab' + (list.id === activeListId ? ' active' : '');
             const nameSpan = document.createElement('span');
@@ -320,8 +368,6 @@ function renderListTabs() {
             delBtn.addEventListener('click', e => { e.stopPropagation(); deleteList(list.id); });
             btn.appendChild(delBtn);
             btn.addEventListener('click', () => { activeListId = list.id; activeView = 'all'; render(); });
-
-            // Drop target
             btn.addEventListener('dragover', e => { e.preventDefault(); btn.classList.add('drag-over'); });
             btn.addEventListener('dragleave', () => btn.classList.remove('drag-over'));
             btn.addEventListener('drop', e => {
@@ -330,7 +376,6 @@ function renderListTabs() {
                 const todoId = e.dataTransfer.getData('text/plain');
                 if (todoId) moveTask(todoId, list.id);
             });
-
             tabsEl.appendChild(btn);
         });
     }
@@ -352,7 +397,8 @@ function renderTaskWidgets() {
     if (!hasList) return;
     const activeList = lists.find(l => l.id === activeListId);
     if (label && activeList) label.textContent = `— ${activeList.name}`;
-    const listTodos = todos.filter(t => t.listId === activeListId);
+    // Only top-level todos (no parentId)
+    const listTodos = todos.filter(t => t.listId === activeListId && !t.parentId);
     renderList('list-container',           'empty-active',    listTodos.filter(t => !t.done && !t.deleted), renderActiveItem);
     renderList('completed-list-container', 'empty-completed', listTodos.filter(t => t.done && !t.deleted),  renderCompletedItem);
     renderList('deleted-list-container',   'empty-deleted',   listTodos.filter(t => t.deleted),             renderDeletedItem);
@@ -370,11 +416,80 @@ function renderList(listId, emptyId, items, itemRenderer) {
     items.forEach(todo => list.appendChild(itemRenderer(todo)));
 }
 
+// ── Subtask renderer ──────────────────────────
+function renderSubtasks(parentId, container) {
+    const subtasks = todos.filter(t => t.parentId === parentId && !t.deleted);
+    if (subtasks.length > 0) {
+        const ul = document.createElement('ul');
+        ul.className = 'subtask-list';
+        subtasks.forEach(sub => {
+            const li = document.createElement('li');
+            li.className = 'subtask-item' + (sub.done ? ' done' : '');
+            const cb = document.createElement('input');
+            cb.type = 'checkbox';
+            cb.checked = sub.done;
+            cb.addEventListener('change', () => toggleSubtask(sub.id));
+            const span = document.createElement('span');
+            span.className = 'subtask-text';
+            span.textContent = sub.text;
+            const delBtn = document.createElement('button');
+            delBtn.className = 'btn-subtask-delete';
+            delBtn.textContent = '✕';
+            delBtn.title = 'Remove subtask';
+            delBtn.addEventListener('click', () => deleteSubtask(sub.id));
+            li.appendChild(cb);
+            li.appendChild(span);
+            li.appendChild(delBtn);
+            ul.appendChild(li);
+        });
+        container.appendChild(ul);
+    }
+
+    // Add subtask input row
+    const addBtn = document.createElement('button');
+    addBtn.className = 'btn-add-subtask';
+    addBtn.textContent = '+ Add subtask';
+    addBtn.addEventListener('click', () => {
+        addBtn.style.display = 'none';
+        const row = document.createElement('div');
+        row.className = 'subtask-input-row';
+        const inp = document.createElement('input');
+        inp.className = 'subtask-input';
+        inp.placeholder = 'Subtask...';
+        inp.type = 'text';
+        const confirmBtn = document.createElement('button');
+        confirmBtn.className = 'btn-add-subtask';
+        confirmBtn.textContent = 'Add';
+        confirmBtn.style.marginLeft = '6px';
+
+        const doAdd = async () => {
+            const val = inp.value.trim();
+            if (val) await addSubtask(parentId, val);
+            else { row.remove(); addBtn.style.display = ''; }
+        };
+
+        inp.addEventListener('keydown', e => {
+            if (e.key === 'Enter') { e.preventDefault(); doAdd(); }
+            if (e.key === 'Escape') { row.remove(); addBtn.style.display = ''; }
+        });
+        confirmBtn.addEventListener('click', doAdd);
+        row.appendChild(inp);
+        row.appendChild(confirmBtn);
+        container.appendChild(row);
+        inp.focus();
+    });
+    container.appendChild(addBtn);
+}
+
 // ── Item renderers ────────────────────────────
 function renderActiveItem(todo) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'subtask-container';
+
     const li = document.createElement('li');
     li.className = 'task-item';
     li.dataset.id = todo.id;
+
     if (todo.editing) {
         const editInput = document.createElement('input');
         editInput.type = 'text'; editInput.className = 'edit-input'; editInput.value = todo.text;
@@ -396,54 +511,56 @@ function renderActiveItem(todo) {
         checkbox.addEventListener('change', () => toggleDone(todo.id));
         const span = document.createElement('span');
         span.className = 'task-text'; span.textContent = todo.text;
+
+        // Subtask progress indicator
+        const subtasks = todos.filter(t => t.parentId === todo.id && !t.deleted);
+        if (subtasks.length > 0) {
+            const done = subtasks.filter(t => t.done).length;
+            const prog = document.createElement('span');
+            prog.className = 'subtask-progress';
+            prog.textContent = `${done}/${subtasks.length}`;
+            span.appendChild(prog);
+        }
+
         const editBtn = document.createElement('button');
         editBtn.className = 'btn-edit'; editBtn.textContent = 'Edit';
         editBtn.addEventListener('click', () => startEdit(todo.id));
-        const deleteBtn = document.createElement('button');
-        deleteBtn.className = 'btn-delete'; deleteBtn.textContent = 'Delete';
-        deleteBtn.addEventListener('click', () => deleteTodo(todo.id));
-        // Move button — shows a select dropdown
         const moveBtn = document.createElement('button');
         moveBtn.className = 'btn-move';
         moveBtn.textContent = '→';
         moveBtn.title = 'Move to another list';
         moveBtn.addEventListener('click', (e) => {
             e.stopPropagation();
-            // Remove any existing move select
             const existing = li.querySelector('.move-select');
             if (existing) { existing.remove(); return; }
-
             const sel = document.createElement('select');
             sel.className = 'move-select';
             const defaultOpt = document.createElement('option');
             defaultOpt.value = ''; defaultOpt.textContent = 'Move to...';
             sel.appendChild(defaultOpt);
-
             lists.filter(l => l.id !== todo.listId).forEach(l => {
                 const opt = document.createElement('option');
                 opt.value = l.id; opt.textContent = l.name;
                 sel.appendChild(opt);
             });
-
-            sel.addEventListener('change', () => {
-                if (sel.value) moveTask(todo.id, sel.value);
-            });
-
+            sel.addEventListener('change', () => { if (sel.value) moveTask(todo.id, sel.value); });
             li.appendChild(sel);
             sel.focus();
         });
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'btn-delete'; deleteBtn.textContent = 'Delete';
+        deleteBtn.addEventListener('click', () => deleteTodo(todo.id));
 
         li.appendChild(checkbox); li.appendChild(span); li.appendChild(editBtn); li.appendChild(moveBtn); li.appendChild(deleteBtn);
 
-        // Drag and drop
         li.setAttribute('draggable', 'true');
-        li.addEventListener('dragstart', e => {
-            e.dataTransfer.setData('text/plain', todo.id);
-            li.classList.add('dragging');
-        });
+        li.addEventListener('dragstart', e => { e.dataTransfer.setData('text/plain', todo.id); li.classList.add('dragging'); });
         li.addEventListener('dragend', () => li.classList.remove('dragging'));
     }
-    return li;
+
+    wrapper.appendChild(li);
+    renderSubtasks(todo.id, wrapper);
+    return wrapper;
 }
 
 function renderCompletedItem(todo) {
@@ -476,7 +593,7 @@ async function toggleDone(id) {
     const todo = todos.find(t => t.id === id);
     if (!todo) return;
     todo.done = !todo.done;
-    if (useCloud) { await supabase.from('todos').update({ done: todo.done }).eq('id', id); } else { save(); }
+    if (useCloud) { await window.supabase.from('todos').update({ done: todo.done }).eq('id', id); } else { save(); }
     logChange(todo.done ? `Completed: "${todo.text}"` : `Reopened: "${todo.text}"`);
     render();
 }
@@ -491,12 +608,12 @@ async function saveEdit(id, newText) {
     const editInput = li ? li.querySelector('.edit-input') : null;
     if (!text) { if (editInput) { showWarning(editInput, 'Task cannot be empty.'); editInput.focus(); } return; }
     if (text.length > 200) { if (editInput) { showWarning(editInput, 'Task must be 200 characters or fewer.'); editInput.focus(); } return; }
-    const activeTasks = todos.filter(t => t.listId === todo.listId && !t.deleted && t.id !== id);
+    const activeTasks = todos.filter(t => t.listId === todo.listId && !t.deleted && t.id !== id && !t.parentId);
     const duplicate = activeTasks.find(t => normalise(t.text) === normalise(text));
     if (duplicate) { if (editInput) { showWarning(editInput, 'Another task with that name already exists.'); editInput.focus(); } return; }
     const old = todo.text;
     todo.text = text; todo.editing = false;
-    if (useCloud) { await supabase.from('todos').update({ text }).eq('id', id); } else { save(); }
+    if (useCloud) { await window.supabase.from('todos').update({ text }).eq('id', id); } else { save(); }
     logChange(`Edited: "${old}" → "${text}"`);
     render();
 }
@@ -508,7 +625,7 @@ async function deleteTodo(id) {
     const todo = todos.find(t => t.id === id);
     if (!todo) return;
     todo.deleted = true; todo.done = false; todo.editing = false;
-    if (useCloud) { await supabase.from('todos').update({ deleted: true, done: false }).eq('id', id); } else { save(); }
+    if (useCloud) { await window.supabase.from('todos').update({ deleted: true, done: false }).eq('id', id); } else { save(); }
     logChange(`Deleted: "${todo.text}"`);
     render();
 }
@@ -517,7 +634,7 @@ async function restoreTodo(id) {
     const todo = todos.find(t => t.id === id);
     if (!todo) return;
     todo.deleted = false;
-    if (useCloud) { await supabase.from('todos').update({ deleted: false }).eq('id', id); } else { save(); }
+    if (useCloud) { await window.supabase.from('todos').update({ deleted: false }).eq('id', id); } else { save(); }
     logChange(`Restored: "${todo.text}"`);
     render();
 }
@@ -526,19 +643,31 @@ async function clearDeleted() {
     if (!activeListId) return;
     const toDelete = todos.filter(t => t.listId === activeListId && t.deleted);
     const count = toDelete.length;
-    if (useCloud) { for (const t of toDelete) { await supabase.from('todos').delete().eq('id', t.id); } }
+    if (useCloud) { for (const t of toDelete) { await window.supabase.from('todos').delete().eq('id', t.id); } }
     todos = todos.filter(t => !(t.listId === activeListId && t.deleted));
     if (!useCloud) save();
     logChange(`Permanently removed ${count} deleted task(s)`);
     render();
 }
 
+// ── Move task ────────────────────────────────
+async function moveTask(todoId, newListId) {
+    const todo = todos.find(t => t.id === todoId);
+    if (!todo) return;
+    const newList = lists.find(l => l.id === newListId);
+    if (!newList || todo.listId === newListId) return;
+    todo.listId = newListId;
+    if (useCloud) { await window.supabase.from('todos').update({ list_id: newListId }).eq('id', todoId); } else { save(); }
+    logChange(`Moved: "${todo.text}" → "${newList.name}"`);
+    render();
+}
+
 // ── Stats ─────────────────────────────────────
 function updateStats() {
-    const activeTodos    = todos.filter(t => !t.done && !t.deleted);
-    const doneTodos      = todos.filter(t => t.done && !t.deleted);
+    const activeTodos    = todos.filter(t => !t.done && !t.deleted && !t.parentId);
+    const doneTodos      = todos.filter(t => t.done && !t.deleted && !t.parentId);
     const completedLists = lists.filter(l => {
-        const listTasks = todos.filter(t => t.listId === l.id && !t.deleted);
+        const listTasks = todos.filter(t => t.listId === l.id && !t.deleted && !t.parentId);
         return listTasks.length > 0 && listTasks.every(t => t.done);
     });
     const listsEl     = document.getElementById('stat-lists');
@@ -571,25 +700,18 @@ function renderLog() {
 function renderFocusCard() {
     const widget = document.getElementById('widget-focus');
     if (!widget) return;
-
-    const activeTasks = todos.filter(t => !t.done && !t.deleted);
+    const activeTasks = todos.filter(t => !t.done && !t.deleted && !t.parentId);
     if (activeTasks.length === 0) { widget.style.display = 'none'; return; }
-
     widget.style.display = 'block';
-
-    // Restore or pick a focus task
     let focusTask = activeTasks.find(t => String(t.id) === String(focusTaskId));
     if (!focusTask) {
         focusTask = activeTasks[Math.floor(Math.random() * activeTasks.length)];
         focusTaskId = focusTask.id;
         localStorage.setItem('krhdev-focus-task', focusTaskId);
     }
-
     const list = lists.find(l => l.id === focusTask.listId);
     document.getElementById('focus-task-text').textContent = focusTask.text;
     document.getElementById('focus-list-name').textContent = list ? list.name.toUpperCase() : '';
-
-    // Done button
     const doneBtn = document.getElementById('focus-done-btn');
     if (doneBtn) {
         doneBtn.onclick = async () => {
@@ -599,8 +721,6 @@ function renderFocusCard() {
             renderFocusCard();
         };
     }
-
-    // Re-roll button
     const rerollBtn = document.getElementById('focus-reroll-btn');
     if (rerollBtn) {
         rerollBtn.onclick = () => {
@@ -611,8 +731,6 @@ function renderFocusCard() {
             renderFocusCard();
         };
     }
-
-    // Clear button
     const clearBtn = document.getElementById('focus-clear-btn');
     if (clearBtn) {
         clearBtn.onclick = () => {
@@ -621,26 +739,6 @@ function renderFocusCard() {
             widget.style.display = 'none';
         };
     }
-}
-
-// ── Move task ────────────────────────────────
-async function moveTask(todoId, newListId) {
-    const todo = todos.find(t => t.id === todoId);
-    if (!todo) return;
-    const oldList = lists.find(l => l.id === todo.listId);
-    const newList = lists.find(l => l.id === newListId);
-    if (!newList || todo.listId === newListId) return;
-
-    todo.listId = newListId;
-
-    if (useCloud) {
-        await window.supabase.from('todos').update({ list_id: newListId }).eq('id', todoId);
-    } else {
-        save();
-    }
-
-    logChange(`Moved: "${todo.text}" → "${newList.name}"`);
-    render();
 }
 
 // ── Utility ───────────────────────────────────
@@ -668,7 +766,7 @@ function renderSidebarUser() {
 
 // ── Auth ──────────────────────────────────────
 async function signOut() {
-    await supabase.auth.signOut();
+    await window.supabase.auth.signOut();
     currentUser = null; useCloud = false;
     lists = JSON.parse(localStorage.getItem('krhdev-lists') || '[]');
     todos = JSON.parse(localStorage.getItem('krhdev-todos') || '[]');
@@ -683,7 +781,6 @@ function hideAuthOverlay() { const o = document.getElementById('auth-overlay'); 
 // ── DOMContentLoaded ──────────────────────────
 document.addEventListener('DOMContentLoaded', async function () {
 
-    // Mobile sidebar
     const sidebar       = document.getElementById('sidebar');
     const sidebarOpen   = document.getElementById('sidebar-open');
     const sidebarToggle = document.getElementById('sidebar-toggle');
@@ -700,11 +797,10 @@ document.addEventListener('DOMContentLoaded', async function () {
     });
 
     loadTheme();
-
     const radios = document.querySelectorAll('input[name="theme"]');
     radios.forEach(r => { r.addEventListener('change', () => applyTheme(r.value)); });
 
-    // Auth overlay
+    // Auth
     const authSubmitBtn = document.getElementById('auth-submit-btn');
     const authSwitch    = document.getElementById('auth-switch');
     const authSkipBtn   = document.getElementById('auth-skip-btn');
@@ -736,14 +832,12 @@ document.addEventListener('DOMContentLoaded', async function () {
             authSubmitBtn.disabled = true;
             let errMsg = null;
             if (authMode === 'signin') {
-                const { error } = await supabase.auth.signInWithPassword({ email, password });
+                const { error } = await window.supabase.auth.signInWithPassword({ email, password });
                 if (error) errMsg = error.message;
             } else {
-                const { error } = await supabase.auth.signUp({ email, password });
+                const { error } = await window.supabase.auth.signUp({ email, password });
                 if (error) errMsg = error.message;
-                else {
-                    if (authMsg) { authMsg.textContent = 'Account created! Check your email to confirm, then sign in.'; authMsg.className = 'success'; }
-                }
+                else { if (authMsg) { authMsg.textContent = 'Account created! Check your email to confirm, then sign in.'; authMsg.className = 'success'; } }
             }
             authSubmitBtn.disabled = false;
             authSubmitBtn.textContent = authMode === 'signin' ? 'Sign In' : 'Create Account';
@@ -751,26 +845,17 @@ document.addEventListener('DOMContentLoaded', async function () {
         });
     }
 
-    if (authPassword) {
-        authPassword.addEventListener('keydown', e => { if (e.key === 'Enter') authSubmitBtn?.click(); });
-    }
+    if (authPassword) { authPassword.addEventListener('keydown', e => { if (e.key === 'Enter') authSubmitBtn?.click(); }); }
+    if (authSkipBtn)  { authSkipBtn.addEventListener('click', () => { hideAuthOverlay(); useCloud = false; render(); }); }
 
-    if (authSkipBtn) {
-        authSkipBtn.addEventListener('click', () => { hideAuthOverlay(); useCloud = false; render(); });
-    }
-
-    // Show overlay immediately — hide only once session confirmed
     if (authOverlay) showAuthOverlay();
 
-    // Supabase auth state — use window.supabase to ensure CDN is loaded
     const _supabase = (typeof window.supabase !== 'undefined' && window.supabase.auth) ? window.supabase : null;
     if (_supabase) {
         _supabase.auth.onAuthStateChange(async (event, session) => {
             if (session?.user) {
-                currentUser = session.user;
-                useCloud    = true;
-                hideAuthOverlay();
-                renderSidebarUser();
+                currentUser = session.user; useCloud = true;
+                hideAuthOverlay(); renderSidebarUser();
                 await loadFromCloud();
             } else {
                 currentUser = null; useCloud = false;
@@ -781,7 +866,6 @@ document.addEventListener('DOMContentLoaded', async function () {
         const { data: { session } } = await _supabase.auth.getSession();
         if (!session && authOverlay) showAuthOverlay();
     } else {
-        // Supabase not available — show overlay anyway so user sees the card
         if (authOverlay) showAuthOverlay();
     }
 
@@ -790,9 +874,8 @@ document.addEventListener('DOMContentLoaded', async function () {
     if (categoryFilter) categoryFilter.addEventListener('change', () => render());
 
     // + New category
-    const newCatSelect = document.getElementById('new-list-category');
-    const newCatInput  = document.getElementById('new-category-input');
-
+    const newCatSelect     = document.getElementById('new-list-category');
+    const newCatInput      = document.getElementById('new-category-input');
     const newCatRow        = document.getElementById('new-category-row');
     const newCatConfirmBtn = document.getElementById('new-category-confirm-btn');
 
@@ -821,22 +904,14 @@ document.addEventListener('DOMContentLoaded', async function () {
                 newCatInput.value = '';
             }
         });
-
         newCatInput.addEventListener('keydown', e => {
             if (e.key === 'Enter') { e.preventDefault(); confirmNewCategory(); }
-            if (e.key === 'Escape') {
-                newCatSelect.value = 'General';
-                if (newCatRow) newCatRow.style.display = 'none';
-                newCatInput.value = '';
-            }
+            if (e.key === 'Escape') { newCatSelect.value = 'General'; if (newCatRow) newCatRow.style.display = 'none'; newCatInput.value = ''; }
         });
     }
+    if (newCatConfirmBtn) newCatConfirmBtn.addEventListener('click', confirmNewCategory);
 
-    if (newCatConfirmBtn) {
-        newCatConfirmBtn.addEventListener('click', confirmNewCategory);
-    }
-
-    // Settings: clear data
+    // Settings
     const clearDataBtn = document.getElementById('clear-data-btn');
     if (clearDataBtn) {
         clearDataBtn.addEventListener('click', () => {
@@ -902,7 +977,6 @@ document.addEventListener('DOMContentLoaded', async function () {
         });
     }
 
-    // Restore last active list (localStorage mode only)
     if (!useCloud && lists.length > 0) {
         const lastActive = localStorage.getItem('krhdev-active-list');
         const found = lastActive && lists.find(l => l.id === parseInt(lastActive));
