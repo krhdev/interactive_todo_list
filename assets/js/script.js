@@ -129,7 +129,10 @@ async function loadFromCloud() {
         deleted:  t.deleted,
         editing:  false
     }));
-    activeListId = lists.length ? lists[0].id : null;
+    // Preserve last active list if it still exists, otherwise use first
+    const savedActive = localStorage.getItem('krhdev-active-list');
+    const stillExists = savedActive && lists.find(l => l.id === savedActive);
+    activeListId = stillExists ? savedActive : (lists.length ? lists[0].id : null);
     activeView   = lists.length ? 'all' : 'home';
     await checkAndReset();
     render();
@@ -880,6 +883,24 @@ document.addEventListener('DOMContentLoaded', async function () {
     const newCatRow        = document.getElementById('new-category-row');
     const newCatConfirmBtn = document.getElementById('new-category-confirm-btn');
 
+    // Load saved custom categories into the select
+    function loadCustomCategories() {
+        if (!newCatSelect) return;
+        const saved = JSON.parse(localStorage.getItem('krhdev-custom-categories') || '[]');
+        // Reset select to first option (Category placeholder) on load
+        newCatSelect.selectedIndex = 0;
+        saved.forEach(val => {
+            const exists = Array.from(newCatSelect.options).find(o => o.value === val);
+            if (!exists) {
+                const opt = document.createElement('option');
+                opt.value = val; opt.textContent = val;
+                // Insert before the __new__ option (last child)
+                newCatSelect.insertBefore(opt, newCatSelect.lastElementChild);
+            }
+        });
+    }
+    loadCustomCategories();
+
     function confirmNewCategory() {
         const val = newCatInput?.value.trim();
         if (!val) return;
@@ -888,6 +909,9 @@ document.addEventListener('DOMContentLoaded', async function () {
             const opt = document.createElement('option');
             opt.value = val; opt.textContent = val;
             newCatSelect.insertBefore(opt, newCatSelect.lastElementChild);
+            // Save to localStorage so it persists across refreshes
+            const saved = JSON.parse(localStorage.getItem('krhdev-custom-categories') || '[]');
+            if (!saved.includes(val)) { saved.push(val); localStorage.setItem('krhdev-custom-categories', JSON.stringify(saved)); }
         }
         newCatSelect.value = val;
         if (newCatRow) newCatRow.style.display = 'none';

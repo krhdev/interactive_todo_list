@@ -1184,12 +1184,12 @@ body, html {
 
 .subtask-progress {
     display: inline-block;
-    font-size: 0.75rem;
+    font-size: 0.82rem;
     font-weight: 700;
     color: #1a1a2e;
     background: #f0a500;
     border-radius: 12px;
-    padding: 2px 9px;
+    padding: 3px 11px;
     margin-left: 8px;
     vertical-align: middle;
     letter-spacing: 0.03em;
