@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 
@@ -14,7 +15,6 @@
     <link rel="apple-touch-icon" sizes="512x512" href="./assets/images/todo-icon-512x512.png">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="./assets/css/style.css">
-    <link rel="shortcut icon" type="image/x-icon" href="favicon.ico">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
       const SUPABASE_URL = 'https://dzvsnlxmihqsczgwvhag.supabase.co';
@@ -53,13 +53,13 @@
                 <button class="hamburger" id="sidebar-toggle" aria-label="Close menu">✕</button>
             </div>
             <ul>
-                <li><a href="index.htm" data-view="home">Home</a></li>
-                <li><a href="index.htm#all" data-view="all">View Lists</a></li>
-                <li><a href="index.htm#completed" data-view="completed">View Completed</a></li>
-                <li><a href="index.htm#deleted" data-view="deleted">View Deleted</a></li>
-                <li><a href="index.htm#log" data-view="log">Recent Changes</a></li>
-                <li><a href="settings.htm">Settings</a></li>
+                <li><a href="#" data-view="home">Home</a></li>
+                <li><a href="#" data-view="all">View Lists</a></li>
+                <li><a href="#" data-view="completed">View Completed</a></li>
+                <li><a href="#" data-view="deleted">View Deleted</a></li>
+                <li><a href="#" data-view="log">Recent Changes</a></li>
                 <li><a href="help.htm">Help</a></li>
+                <li><a href="settings.htm">Settings</a></li>
             </ul>
             <div class="sidebar-stats">
                 <div class="stat-row"><span class="stat-label">Lists</span><span class="stat-value" id="stat-lists">0</span></div>
@@ -109,7 +109,7 @@
 
                     <button id="add-list-btn">Create List</button>
                 </div>
-                <div id="new-category-row" style="display:none; margin-top:8px; display:none; gap:8px;" class="add-form">
+                <div id="new-category-row" style="display:none; margin-top:8px; gap:8px;" class="add-form">
                     <input type="text" id="new-category-input" placeholder="Type new category name" />
                     <button type="button" id="new-category-confirm-btn">Add</button>
                 </div>
