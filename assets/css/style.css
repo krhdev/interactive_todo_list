@@ -1095,67 +1095,63 @@ body, html {
 }
 
 /* ── Subtasks ── */
-.subtask-container {
-    list-style: none;
-    padding: 0 0 10px 30px;
-    border-bottom: 1px solid var(--item-border);
-}
-
-.subtask-container:last-child { border-bottom: none; }
-
 .subtask-list {
     list-style: none;
-    margin-bottom: 6px;
+    margin: 6px 0 4px 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
 }
 
 .subtask-item {
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 5px 0;
-    font-size: 0.87rem;
+    padding: 4px 0;
+    border-bottom: 1px solid var(--item-border);
+    font-size: 0.88rem;
 }
 
+.subtask-item:last-child { border-bottom: none; }
+
 .subtask-item input[type="checkbox"] {
+    flex-shrink: 0;
     width: 15px;
     height: 15px;
     accent-color: var(--brand);
     cursor: pointer;
-    flex-shrink: 0;
 }
 
 .subtask-text {
     flex: 1;
-    color: var(--text);
-    word-break: break-word;
+    color: var(--text-muted);
 }
 
-.subtask-item.done .subtask-text {
+.subtask-text.done {
     text-decoration: line-through;
-    color: var(--text-done);
+    color: var(--text-faint);
 }
 
-.btn-add-subtask {
+.btn-subtask-delete {
     background: none;
     border: none;
-    color: var(--brand);
-    font-size: 0.82rem;
-    font-family: inherit;
+    color: var(--text-faint);
     cursor: pointer;
-    padding: 2px 0;
+    font-size: 0.85rem;
+    padding: 0 4px;
+    flex-shrink: 0;
+    transition: color 0.15s;
 }
 
-.btn-add-subtask:hover { text-decoration: underline; }
+.btn-subtask-delete:hover { color: #e53935; }
 
-[data-theme="dark"] .btn-add-subtask { color: var(--brand-readable); }
-
-.subtask-input-row {
+.add-subtask-form {
     display: flex;
     gap: 6px;
-    margin-top: 6px;
+    margin: 6px 0 2px 28px;
 }
 
-.subtask-input {
+.add-subtask-form input {
     flex: 1;
     padding: 5px 8px;
     border: 1px solid var(--input-border);
@@ -1166,7 +1162,40 @@ body, html {
     color: var(--text);
 }
 
-.subtask-input:focus {
+.add-subtask-form input:focus {
     outline: none;
     border-color: var(--brand);
+}
+
+.btn-add-subtask {
+    padding: 5px 10px;
+    background: var(--brand);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-family: inherit;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.15s;
+}
+
+.btn-add-subtask:hover { background: var(--brand-dark); }
+
+.subtask-progress {
+    display: inline-block;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #ffffff;
+    background: var(--brand);
+    border-radius: 10px;
+    padding: 1px 7px;
+    margin-left: 8px;
+    vertical-align: middle;
+    letter-spacing: 0.03em;
+}
+
+[data-theme="dark"] .subtask-progress {
+    background: #510061;
+    color: #c97fdc;
 }
