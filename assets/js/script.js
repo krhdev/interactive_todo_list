@@ -722,20 +722,22 @@ function renderFocusCard() {
     const widget = document.getElementById('widget-focus');
     if (!widget) return;
 
-    // Update toggle button state
-    const toggleBtn = document.getElementById('focus-toggle-btn');
-    if (toggleBtn) toggleBtn.textContent = focusEnabled ? '◉ Focus On' : '○ Focus Off';
+    // Check if focus card is toggled off
+    if (localStorage.getItem('krhdev-focus-hidden') === 'true') {
+        widget.style.display = 'none';
+        const showBtn = document.getElementById('focus-show-btn');
+        if (showBtn) showBtn.style.display = 'inline-block';
+        return;
+    }
 
-    if (!focusEnabled) { widget.style.display = 'none'; return; }
-
-    // Filter by active category if not showing All
-    const pillsEl = document.getElementById('category-pills');
-    const activeCat = pillsEl?.dataset.active || 'All';
-    const categoryListIds = activeCat === 'All'
+    // Filter tasks by active category pill
+    const pillsEl    = document.getElementById('category-pills');
+    const activeCat  = pillsEl?.dataset.active || 'All';
+    const catListIds = activeCat === 'All'
         ? lists.map(l => l.id)
         : lists.filter(l => (l.category || 'General') === activeCat).map(l => l.id);
 
-    const activeTasks = todos.filter(t => !t.done && !t.deleted && !t.parentId && categoryListIds.includes(t.listId));
+    const activeTasks = todos.filter(t => !t.done && !t.deleted && !t.parentId && catListIds.includes(t.listId));
     if (activeTasks.length === 0) { widget.style.display = 'none'; return; }
     widget.style.display = 'block';
 
@@ -745,24 +747,25 @@ function renderFocusCard() {
         focusTaskId = focusTask.id;
         localStorage.setItem('krhdev-focus-task', focusTaskId);
     }
+
     const list = lists.find(l => l.id === focusTask.listId);
     document.getElementById('focus-task-text').textContent = focusTask.text;
     document.getElementById('focus-list-name').textContent = list ? list.name.toUpperCase() : '';
 
-    // Toggle off button
-    const toggleBtn = document.getElementById('focus-toggle-btn');
-    if (toggleBtn) {
-        toggleBtn.onclick = () => {
-            localStorage.setItem('krhdev-focus-hidden', 'true');
-            widget.style.display = 'none';
-            const showBtn = document.getElementById('focus-show-btn');
-            if (showBtn) showBtn.style.display = 'inline-block';
-        };
-    }
-
     // Hide the show button when card is visible
     const showBtn = document.getElementById('focus-show-btn');
     if (showBtn) showBtn.style.display = 'none';
+
+    // Toggle off button
+    const focusToggleBtn = document.getElementById('focus-toggle-btn');
+    if (focusToggleBtn) {
+        focusToggleBtn.onclick = () => {
+            localStorage.setItem('krhdev-focus-hidden', 'true');
+            widget.style.display = 'none';
+            const sb = document.getElementById('focus-show-btn');
+            if (sb) sb.style.display = 'inline-block';
+        };
+    }
 
     const doneBtn = document.getElementById('focus-done-btn');
     if (doneBtn) {
