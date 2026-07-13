@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 
@@ -15,7 +14,6 @@
     <link rel="apple-touch-icon" sizes="512x512" href="./assets/images/todo-icon-512x512.png">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="./assets/css/style.css">
-    <link rel="shortcut icon" type="image/x-icon" href="favicon.ico">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
       const SUPABASE_URL = 'https://dzvsnlxmihqsczgwvhag.supabase.co';
@@ -80,7 +78,10 @@
             <!-- FOCUS TASK OF THE DAY -->
             <div id="widget-focus" style="display:none;">
                 <div class="focus-card">
-                    <div class="focus-card-label">FOCUS TASK OF THE DAY</div>
+                    <div class="focus-card-label">
+                        FOCUS TASK OF THE DAY
+                        <button id="focus-toggle-btn" class="btn-focus-toggle">◉ Focus On</button>
+                    </div>
                     <div class="focus-card-list" id="focus-list-name"></div>
                     <div class="focus-card-task" id="focus-task-text">No tasks yet — add one below!</div>
                     <div class="focus-card-actions">

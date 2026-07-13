@@ -59,7 +59,8 @@ let nextListId = lists.length ? Math.max(...lists.map(l => l.id)) + 1 : 1;
 let nextTodoId = todos.length ? Math.max(...todos.map(t => t.id)) + 1 : 1;
 let activeListId = null;
 let activeView   = 'home';
-let focusTaskId  = localStorage.getItem('krhdev-focus-task') || null;
+let focusTaskId      = localStorage.getItem('krhdev-focus-task') || null;
+let focusEnabled     = localStorage.getItem('krhdev-focus-enabled') !== 'false'; // default on
 
 function save() {
     localStorage.setItem('krhdev-lists', JSON.stringify(lists));
@@ -720,9 +721,24 @@ function renderLog() {
 function renderFocusCard() {
     const widget = document.getElementById('widget-focus');
     if (!widget) return;
-    const activeTasks = todos.filter(t => !t.done && !t.deleted && !t.parentId);
+
+    // Update toggle button state
+    const toggleBtn = document.getElementById('focus-toggle-btn');
+    if (toggleBtn) toggleBtn.textContent = focusEnabled ? '◉ Focus On' : '○ Focus Off';
+
+    if (!focusEnabled) { widget.style.display = 'none'; return; }
+
+    // Filter by active category if not showing All
+    const pillsEl = document.getElementById('category-pills');
+    const activeCat = pillsEl?.dataset.active || 'All';
+    const categoryListIds = activeCat === 'All'
+        ? lists.map(l => l.id)
+        : lists.filter(l => (l.category || 'General') === activeCat).map(l => l.id);
+
+    const activeTasks = todos.filter(t => !t.done && !t.deleted && !t.parentId && categoryListIds.includes(t.listId));
     if (activeTasks.length === 0) { widget.style.display = 'none'; return; }
     widget.style.display = 'block';
+
     let focusTask = activeTasks.find(t => String(t.id) === String(focusTaskId));
     if (!focusTask) {
         focusTask = activeTasks[Math.floor(Math.random() * activeTasks.length)];
@@ -732,6 +748,22 @@ function renderFocusCard() {
     const list = lists.find(l => l.id === focusTask.listId);
     document.getElementById('focus-task-text').textContent = focusTask.text;
     document.getElementById('focus-list-name').textContent = list ? list.name.toUpperCase() : '';
+
+    // Toggle off button
+    const toggleBtn = document.getElementById('focus-toggle-btn');
+    if (toggleBtn) {
+        toggleBtn.onclick = () => {
+            localStorage.setItem('krhdev-focus-hidden', 'true');
+            widget.style.display = 'none';
+            const showBtn = document.getElementById('focus-show-btn');
+            if (showBtn) showBtn.style.display = 'inline-block';
+        };
+    }
+
+    // Hide the show button when card is visible
+    const showBtn = document.getElementById('focus-show-btn');
+    if (showBtn) showBtn.style.display = 'none';
+
     const doneBtn = document.getElementById('focus-done-btn');
     if (doneBtn) {
         doneBtn.onclick = async () => {
@@ -887,6 +919,30 @@ document.addEventListener('DOMContentLoaded', async function () {
         if (!session && authOverlay) showAuthOverlay();
     } else {
         if (authOverlay) showAuthOverlay();
+    }
+
+    // Focus toggle button
+    const focusToggleBtn = document.getElementById('focus-toggle-btn');
+    if (focusToggleBtn) {
+        focusToggleBtn.addEventListener('click', () => {
+            focusEnabled = !focusEnabled;
+            localStorage.setItem('krhdev-focus-enabled', focusEnabled);
+            if (!focusEnabled) {
+                focusTaskId = null;
+                localStorage.removeItem('krhdev-focus-task');
+            }
+            render();
+        });
+    }
+
+    // Focus show button
+    const focusShowBtn = document.getElementById('focus-show-btn');
+    if (focusShowBtn) {
+        focusShowBtn.addEventListener('click', () => {
+            localStorage.removeItem('krhdev-focus-hidden');
+            focusShowBtn.style.display = 'none';
+            renderFocusCard();
+        });
     }
 
     // Category filter
