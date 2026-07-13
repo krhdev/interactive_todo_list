@@ -336,7 +336,9 @@ function renderListTabs() {
     if (pillsEl) {
         pillsEl.innerHTML = '';
         const categories = ['All', ...new Set(lists.map(l => l.category || 'General'))];
-        const activeCat  = pillsEl.dataset.active || 'All';
+        // Default to first real category, not All
+        const firstCat   = categories.find(c => c !== 'All') || 'All';
+        const activeCat  = pillsEl.dataset.active || firstCat;
 
         categories.forEach(cat => {
             const count = cat === 'All'
@@ -345,7 +347,21 @@ function renderListTabs() {
             const pill = document.createElement('button');
             pill.className = 'category-pill' + (activeCat === cat ? ' active' : '');
             pill.innerHTML = `${cat} <span class="pill-count">${count}</span>`;
-            pill.addEventListener('click', () => { pillsEl.dataset.active = cat; renderListTabs(); });
+
+            pill.addEventListener('click', () => {
+                if (cat === 'All') {
+                    // Toggle: if already on All, switch back to first real category
+                    if (activeCat === 'All') {
+                        const firstReal = categories.find(c => c !== 'All');
+                        pillsEl.dataset.active = firstReal || 'All';
+                    } else {
+                        pillsEl.dataset.active = 'All';
+                    }
+                } else {
+                    pillsEl.dataset.active = cat;
+                }
+                renderListTabs();
+            });
             pillsEl.appendChild(pill);
         });
 
