@@ -318,6 +318,12 @@ function render() {
     document.querySelectorAll('[data-view]').forEach(link => {
         link.classList.toggle('active', link.dataset.view === activeView);
     });
+
+    // Always show/hide the focus show button based on preference
+    const focusShowBtn = document.getElementById('focus-show-btn');
+    const focusHidden  = localStorage.getItem('krhdev-focus-hidden') === 'true';
+    if (focusShowBtn) focusShowBtn.style.display = focusHidden ? 'inline-block' : 'none';
+
     renderFocusCard();
     renderListTabs();
     renderTaskWidgets();
