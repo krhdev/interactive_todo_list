@@ -9,22 +9,40 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="To Do List">
-    <link rel="manifest" href="/manifest.json">
+    <link rel="manifest" href="./manifest.json">
     <link rel="apple-touch-icon" sizes="192x192" href="./assets/images/todo-icon-192x192.png">
     <link rel="apple-touch-icon" sizes="512x512" href="./assets/images/todo-icon-512x512.png">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="./assets/css/style.css">
-      <link rel="shortcut icon" type="image/x-icon" href="favicon.ico">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js');
-        });
-      }
+      const SUPABASE_URL = 'https://dzvsnlxmihqsczgwvhag.supabase.co';
+      const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR6dnNubHhtaWhxc2N6Z3d2aGFnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI2ODg4NDgsImV4cCI6MjA5ODI2NDg0OH0.e8kXUW9mIK-4fCAflIUpESr6mjywABknafgocGP4YlM';
+      window.supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
     </script>
 </head>
 
 <body>
+
+    <!-- Auth overlay -->
+    <div id="auth-overlay" style="display:none;">
+        <div id="auth-card">
+            <img src="./assets/images/todo-icon-192x192.png" width="60px">
+            <h2 id="auth-title">Sign in to KRHDev To Do List</h2>
+            <p id="auth-subtitle">Save your lists across all your devices</p>
+            <div class="add-form">
+                <input type="email" id="auth-email" placeholder="Email address" />
+            </div>
+            <div class="add-form">
+                <input type="password" id="auth-password" placeholder="Password" />
+            </div>
+            <button id="auth-submit-btn">Sign In</button>
+            <p id="auth-toggle">Don't have an account? <a href="#" id="auth-switch">Sign Up</a></p>
+            <p id="auth-msg"></p>
+            <hr>
+            <button id="auth-skip-btn">Continue without signing in</button>
+        </div>
+    </div>
 
     <div class="container">
         <div class="sidebar" id="sidebar">
@@ -34,14 +52,20 @@
                 <button class="hamburger" id="sidebar-toggle" aria-label="Close menu">✕</button>
             </div>
             <ul>
-                <li><a href="index.htm">Home</a></li>
-                <li><a href="index.htm">View Lists</a></li>
-                <li><a href="index.htm">View Completed</a></li>
-                <li><a href="index.htm">View Deleted</a></li>
-                <li><a href="index.htm">Recent Changes</a></li>
+                <li><a href="#" data-view="home">Home</a></li>
+                <li><a href="#" data-view="all">View Lists</a></li>
+                <li><a href="#" data-view="completed">View Completed</a></li>
+                <li><a href="#" data-view="deleted">View Deleted</a></li>
+                <li><a href="#" data-view="log">Recent Changes</a></li>
+                <li><a href="help.htm">Help</a></li>
                 <li><a href="settings.htm">Settings</a></li>
-                <li><a href="help.htm" class="active">Help</a></li>
             </ul>
+            <div class="sidebar-stats">
+                <div class="stat-row"><span class="stat-label">Lists</span><span class="stat-value" id="stat-lists">0</span></div>
+                <div class="stat-row"><span class="stat-label">Active tasks</span><span class="stat-value" id="stat-active">0</span></div>
+                <div class="stat-row"><span class="stat-label">Completed tasks</span><span class="stat-value" id="stat-done">0</span></div>
+                <div class="stat-row"><span class="stat-label">Completed lists</span><span class="stat-value" id="stat-lists-done">0</span></div>
+            </div>
         </div>
 
         <div class="main-content">
@@ -49,213 +73,100 @@
                 <button class="hamburger" id="sidebar-open" aria-label="Open menu">☰</button>
                 <span class="mobile-title" id="mobile-title">KRHDev's To Do List</span>
             </div>
+            <h1 id="page-title">My To-Do Lists</h1>
 
-            <h1>Help &amp; Guide</h1>
+            <!-- FOCUS TASK OF THE DAY -->
+            <button id="focus-show-btn" style="display:none;" class="btn-focus-show">⚡ Show Focus Task</button>
+            <div id="widget-focus" style="display:none;">
+                <div class="focus-card">
+                    <div class="focus-card-label">
+                        FOCUS TASK OF THE DAY
+                        <button id="focus-toggle-btn" class="btn-focus-toggle" title="Hide focus card">✕</button>
+                    </div>
+                    <div class="focus-card-list" id="focus-list-name"></div>
+                    <div class="focus-card-task" id="focus-task-text">No tasks yet — add one below!</div>
+                    <div class="focus-card-actions">
+                        <button class="btn-focus-done" id="focus-done-btn">✓ Done</button>
+                        <button class="btn-focus-reroll" id="focus-reroll-btn">↺ Re-roll</button>
+                        <button class="btn-focus-clear" id="focus-clear-btn">Clear focus</button>
+                    </div>
+                </div>
+            </div>
 
+            <!-- CREATE LIST -->
             <div class="widget">
+                <h2>New List</h2>
+                <div class="add-form">
+                    <input type="text" id="new-list" placeholder="Enter list name" />
+                    <select id="new-list-category" class="category-select">
+                        <option value="General">Category</option>
+                        <option value="General">General</option>
+                        <option value="Today">📌 Today</option>
+                        <option value="Daily">🔁 Daily</option>
+                        <option value="Weekly">📅 Weekly</option>
+                        <option value="Training">📚 Training</option>
+                        <option value="Research">🔬 Research</option>
+                        <option value="Personal Projects">🗂️ Personal Projects</option>
+                        <option value="__new__">＋ New category...</option>
+                    </select>
 
-                <!-- 1 -->
-                <details class="help-section" open>
-                    <summary>Where is my data saved?</summary>
-                    <div class="help-body">
-                        <p>If you are signed in, your lists and tasks are saved securely in the cloud and will sync across all your devices automatically.</p>
-                        <p>If you use the app without signing in, your data is saved <strong>on this device only</strong>, inside your browser. Nothing is sent to a server.</p>
-                        <ul>
-                            <li>Your data on your phone is separate from your data on your laptop unless you sign in.</li>
-                            <li>If you clear your browser's site data or cache, local data will be gone.</li>
-                        </ul>
-                        <div class="tip"><strong>Tip:</strong> Sign in to keep your lists safe and accessible everywhere. Export regularly as an extra backup.</div>
-                    </div>
-                </details>
+                    <button id="add-list-btn">Create List</button>
+                </div>
+                <div id="new-category-row" style="display:none; margin-top:8px; gap:8px;" class="add-form">
+                    <input type="text" id="new-category-input" placeholder="Type new category name" />
+                    <button type="button" id="new-category-confirm-btn">Add</button>
+                </div>
+            </div>
 
-                <!-- 2 -->
-                <details class="help-section">
-                    <summary>Signing in and accounts</summary>
-                    <div class="help-body">
-                        <p>When you open the app you'll see a sign in card. You can sign in, create an account, or continue without signing in.</p>
-                        <ul>
-                            <li><strong>Sign up:</strong> Enter your email and a password and click Create Account. Check your email for a confirmation link.</li>
-                            <li><strong>Sign in:</strong> Enter your email and password and click Sign In.</li>
-                            <li><strong>Continue without signing in:</strong> Uses local storage on this device only.</li>
-                            <li><strong>Sign out:</strong> Click Sign out next to your email in the sidebar.</li>
-                        </ul>
-                        <div class="tip"><strong>Tip:</strong> Once signed in, your lists load automatically on any device.</div>
-                    </div>
-                </details>
+            <!-- LIST SELECTOR -->
+            <div class="widget" id="widget-list-selector" style="display:none;">
+                <h2>Your Lists</h2>
+                <div class="category-pills" id="category-pills"></div>
+                <div id="list-tabs" class="list-tabs"></div>
+            </div>
 
-                <!-- 3 -->
-                <details class="help-section">
-                    <summary>How do I use lists and categories?</summary>
-                    <div class="help-body">
-                        <p>Lists let you group tasks together. Each list belongs to a category which helps you organise and filter them.</p>
-                        <ul>
-                            <li>Type a name in the <strong>New List</strong> box, choose a category from the dropdown, and press Create List or Enter.</li>
-                            <li>To add a new category, select <strong>＋ New category...</strong> from the dropdown, type a name and press Enter or click Add.</li>
-                            <li>Click any list tab to switch to it and see its tasks.</li>
-                            <li>To remove a list, click the <strong>✕</strong> on its tab. This deletes the list and all its tasks permanently.</li>
-                        </ul>
-                        <p>Available categories include General, Today, Daily, Weekly, Training, Research, and Personal Projects. Daily and Weekly lists reset automatically — see the section below.</p>
-                    </div>
-                </details>
+            <!-- ADD TASK -->
+            <div class="widget" id="widget-add-task" style="display:none;">
+                <h2>Add a Task <span id="active-list-label" class="active-list-label"></span></h2>
+                <div class="add-form">
+                    <input type="text" id="new-todo" placeholder="What needs doing?" />
+                    <button id="add-btn">Add Task</button>
+                </div>
+            </div>
 
-                <!-- 4 -->
-                <details class="help-section">
-                    <summary>Filtering lists by category</summary>
-                    <div class="help-body">
-                        <p>Above your lists you'll see category pills — buttons that filter which lists are shown.</p>
-                        <ul>
-                            <li>Click a category pill to show only lists in that category.</li>
-                            <li>Click <strong>All</strong> to see every list at once.</li>
-                            <li>Click <strong>All</strong> again to toggle back to category view.</li>
-                        </ul>
-                        <p>Each pill shows a count of how many lists are in that category. Each list tab shows a count of active tasks.</p>
-                    </div>
-                </details>
+            <!-- Active tasks -->
+            <div class="widget" id="widget-all" style="display:none;">
+                <h2>Active Tasks</h2>
+                <p class="empty-msg" id="empty-active">No active tasks. Add one above!</p>
+                <ul id="list-container"></ul>
+            </div>
 
-                <!-- 5 -->
-                <details class="help-section">
-                    <summary>Daily and Weekly auto-reset</summary>
-                    <div class="help-body">
-                        <p>Lists in the <strong>Daily</strong> category automatically un-tick all completed tasks every day at midnight. Lists in the <strong>Weekly</strong> category reset every Monday.</p>
-                        <ul>
-                            <li>Use Daily for recurring habits or routines — take medication, morning checklist, etc.</li>
-                            <li>Use Weekly for things you do once a week.</li>
-                            <li>Tasks are un-ticked, not deleted — they come back as active ready to do again.</li>
-                        </ul>
-                        <div class="tip"><strong>Tip:</strong> Resets are logged in Recent Changes so you can see when they happened.</div>
-                    </div>
-                </details>
+            <!-- Completed tasks -->
+            <div class="widget" id="widget-completed" style="display:none;">
+                <h2>Completed Tasks</h2>
+                <p class="empty-msg" id="empty-completed">No completed tasks yet.</p>
+                <ul id="completed-list-container"></ul>
+            </div>
 
-                <!-- 6 -->
-                <details class="help-section">
-                    <summary>How do I manage tasks?</summary>
-                    <div class="help-body">
-                        <ul>
-                            <li><strong>Add a task:</strong> Select a list, type in the Add a Task box, and press Add Task or Enter.</li>
-                            <li><strong>Complete a task:</strong> Tick the checkbox. It moves to Completed Tasks.</li>
-                            <li><strong>Reopen a task:</strong> In Completed Tasks, untick the checkbox to move it back to active.</li>
-                            <li><strong>Edit a task:</strong> Click Edit, make your change, then Save or press Enter. Press Cancel or Escape to discard.</li>
-                            <li><strong>Delete a task:</strong> Click Delete. It moves to Deleted Tasks — not gone yet.</li>
-                            <li><strong>Restore a task:</strong> In Deleted Tasks, click Restore to bring it back.</li>
-                            <li><strong>Permanently remove deleted tasks:</strong> Use the Clear Deleted button. This cannot be undone.</li>
-                            <li><strong>Move a task:</strong> Click the <strong>→</strong> button on a task and pick a list from the dropdown.</li>
-                        </ul>
-                    </div>
-                </details>
+            <!-- Deleted tasks -->
+            <div class="widget" id="widget-deleted" style="display:none;">
+                <h2>Deleted Tasks</h2>
+                <p class="empty-msg" id="empty-deleted">Nothing deleted.</p>
+                <ul id="deleted-list-container"></ul>
+                <button id="clear-deleted-btn" class="btn-secondary" style="display:none;">Clear Deleted</button>
+            </div>
 
-                <!-- 7 -->
-                <details class="help-section">
-                    <summary>Subtasks</summary>
-                    <div class="help-body">
-                        <p>Any task can have subtasks — smaller steps that sit underneath it.</p>
-                        <ul>
-                            <li>Click <strong>+ Add subtask</strong> under any active task to add one.</li>
-                            <li>Type the subtask name and press Enter or click Add.</li>
-                            <li>Tick a subtask checkbox to mark it done.</li>
-                            <li>Click <strong>✕</strong> on a subtask to remove it permanently.</li>
-                            <li>An orange <strong>2/3</strong> badge on the parent task shows how many subtasks are done.</li>
-                        </ul>
-                    </div>
-                </details>
-
-                <!-- 8 -->
-                <details class="help-section">
-                    <summary>Moving tasks between lists</summary>
-                    <div class="help-body">
-                        <p>You can move any active task to a different list in two ways:</p>
-                        <ul>
-                            <li><strong>Move button:</strong> Click the <strong>→</strong> button on a task, then pick the destination list from the dropdown.</li>
-                            <li><strong>Drag and drop (desktop only):</strong> Drag a task and drop it onto a list tab. The tab highlights in orange when you hover over it.</li>
-                        </ul>
-                        <div class="tip"><strong>Note:</strong> Drag and drop is not available on iOS — use the → button instead.</div>
-                    </div>
-                </details>
-
-                <!-- 9 -->
-                <details class="help-section">
-                    <summary>Focus Task of the Day</summary>
-                    <div class="help-body">
-                        <p>The Focus Task card highlights one task for you to concentrate on. It picks from tasks in your currently active category.</p>
-                        <ul>
-                            <li><strong>✓ Done:</strong> Marks the task complete and picks a new one.</li>
-                            <li><strong>↺ Re-roll:</strong> Picks a different task at random.</li>
-                            <li><strong>Clear focus:</strong> Dismisses the current focus without completing the task.</li>
-                            <li><strong>✕ (top right):</strong> Hides the focus card entirely. A <strong>⚡ Show Focus Task</strong> button appears in its place to bring it back.</li>
-                        </ul>
-                        <div class="tip"><strong>Tip:</strong> Switch category pill to get a focus task from a specific category only.</div>
-                    </div>
-                </details>
-
-                <!-- 10 -->
-                <details class="help-section">
-                    <summary>How do I back up my lists? (Export)</summary>
-                    <div class="help-body">
-                        <p>Exporting saves all your lists and tasks into a file you can keep as a backup or move to another device.</p>
-                        <ul>
-                            <li>In the sidebar, click <strong>⬇ Export Lists</strong>.</li>
-                            <li>A file named something like <code>krhdev-todo-backup-2026-06-22.json</code> will download automatically.</li>
-                            <li>Save it somewhere safe — Downloads, Google Drive, or email it to yourself.</li>
-                        </ul>
-                        <div class="tip"><strong>Tip:</strong> Export regularly, especially before clearing your browser or switching devices.</div>
-                    </div>
-                </details>
-
-                <!-- 11 -->
-                <details class="help-section">
-                    <summary>How do I restore or move my lists? (Import)</summary>
-                    <div class="help-body">
-                        <p>Importing reads a backup file and loads your lists back into the app.</p>
-                        <ul>
-                            <li>In the sidebar, click <strong>⬆ Import Lists</strong> and pick your backup file.</li>
-                            <li><strong>Merge</strong> — adds lists from the file alongside any existing lists.</li>
-                            <li><strong>Replace</strong> — wipes everything and restores exactly what's in the backup.</li>
-                        </ul>
-                        <div class="tip"><strong>Tip:</strong> If unsure, choose Merge — it's the safer option.</div>
-                    </div>
-                </details>
-
-                <!-- 12 -->
-                <details class="help-section">
-                    <summary>How do I use this on my phone or install it?</summary>
-                    <div class="help-body">
-                        <p>The app works in any mobile browser. For a better experience, add it to your home screen:</p>
-                        <ul>
-                            <li><strong>iPhone (Safari):</strong> Tap the Share button ⬆ then Add to Home Screen.</li>
-                            <li><strong>Android (Chrome):</strong> Tap the three-dot menu and choose Add to Home Screen, or look for an install icon in the address bar.</li>
-                            <li><strong>Desktop (Chrome or Edge):</strong> Look for an install icon at the right end of the address bar.</li>
-                        </ul>
-                        <p>Once installed, the app opens without the browser around it and works offline.</p>
-                    </div>
-                </details>
-
-                <!-- 13 -->
-                <details class="help-section">
-                    <summary>Personalising the app</summary>
-                    <div class="help-body">
-                        <p>Go to <a href="settings.htm">Settings</a> to personalise the app:</p>
-                        <ul>
-                            <li><strong>Your name:</strong> Enter your name in the Personalisation section and the app title updates everywhere.</li>
-                            <li><strong>Reset to default:</strong> Click Reset to Default to go back to KRHDev.</li>
-                            <li><strong>Theme:</strong> Switch between light and dark mode. Your choice is saved automatically.</li>
-                        </ul>
-                    </div>
-                </details>
-
-                <!-- 14 -->
-                <details class="help-section">
-                    <summary>How do I clear all my data?</summary>
-                    <div class="help-body">
-                        <p>Go to <a href="settings.htm">Settings</a> and use the <strong>Clear All Data</strong> button. This permanently deletes all lists, tasks, and history from this device.</p>
-                        <div class="tip"><strong>Tip:</strong> Export your lists before clearing data if you want to keep them.</div>
-                    </div>
-                </details>
-
+            <!-- Recent Changes log -->
+            <div class="widget" id="widget-log" style="display:none;">
+                <h2>Recent Changes</h2>
+                <p class="empty-msg" id="empty-log">No changes yet.</p>
+                <ul id="recent-changes-container"></ul>
             </div>
         </div>
     </div>
 
-    <script src="/assets/js/pwa-install.js"></script>
     <script src="./assets/js/script.js"></script>
     <script src="./assets/js/json-io.js"></script>
+    <script src="./assets/js/pwa-install.js"></script>
 </body>
 </html>

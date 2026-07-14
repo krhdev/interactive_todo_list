@@ -924,20 +924,6 @@ document.addEventListener('DOMContentLoaded', async function () {
         if (authOverlay) showAuthOverlay();
     }
 
-    // Focus toggle button
-    const focusToggleBtn = document.getElementById('focus-toggle-btn');
-    if (focusToggleBtn) {
-        focusToggleBtn.addEventListener('click', () => {
-            focusEnabled = !focusEnabled;
-            localStorage.setItem('krhdev-focus-enabled', focusEnabled);
-            if (!focusEnabled) {
-                focusTaskId = null;
-                localStorage.removeItem('krhdev-focus-task');
-            }
-            render();
-        });
-    }
-
     // Focus show button
     const focusShowBtn = document.getElementById('focus-show-btn');
     if (focusShowBtn) {
