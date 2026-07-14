@@ -319,9 +319,14 @@ function render() {
         link.classList.toggle('active', link.dataset.view === activeView);
     });
 
-    // Always show/hide the focus show button based on preference
+    // Sync focus stat toggle button
+    const focusHidden   = localStorage.getItem('krhdev-focus-hidden') === 'true';
+    const focusStatBtn  = document.getElementById('focus-toggle-stat-btn');
+    if (focusStatBtn) {
+        focusStatBtn.textContent = focusHidden ? 'Off' : 'On';
+        focusStatBtn.classList.toggle('off', focusHidden);
+    }
     const focusShowBtn = document.getElementById('focus-show-btn');
-    const focusHidden  = localStorage.getItem('krhdev-focus-hidden') === 'true';
     if (focusShowBtn) focusShowBtn.style.display = focusHidden ? 'inline-block' : 'none';
 
     renderFocusCard();
@@ -937,6 +942,20 @@ document.addEventListener('DOMContentLoaded', async function () {
             localStorage.removeItem('krhdev-focus-hidden');
             focusShowBtn.style.display = 'none';
             renderFocusCard();
+        });
+    }
+
+    // Focus stat toggle button
+    const focusStatBtn = document.getElementById('focus-toggle-stat-btn');
+    if (focusStatBtn) {
+        focusStatBtn.addEventListener('click', () => {
+            const isHidden = localStorage.getItem('krhdev-focus-hidden') === 'true';
+            if (isHidden) {
+                localStorage.removeItem('krhdev-focus-hidden');
+            } else {
+                localStorage.setItem('krhdev-focus-hidden', 'true');
+            }
+            render();
         });
     }
 

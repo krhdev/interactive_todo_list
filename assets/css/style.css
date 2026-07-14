@@ -1258,3 +1258,30 @@ body, html {
     background: #f0a500;
     color: #1a1a2e;
 }
+
+/* ── Focus toggle in stats ── */
+.stat-row--focus {
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px solid rgba(255,255,255,0.1);
+}
+
+.stat-focus-toggle {
+    background: #f0a500;
+    border: none;
+    border-radius: 10px;
+    color: #1a1a2e;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 2px 10px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.15s;
+}
+
+.stat-focus-toggle.off {
+    background: rgba(255,255,255,0.15);
+    color: rgba(255,255,255,0.5);
+}
+
+.stat-focus-toggle:hover { opacity: 0.85; }

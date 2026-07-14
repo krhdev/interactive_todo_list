@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 
@@ -14,7 +15,6 @@
     <link rel="apple-touch-icon" sizes="512x512" href="./assets/images/todo-icon-512x512.png">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="./assets/css/style.css">
-    <link rel="shortcut icon" type="image/x-icon" href="favicon.ico">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
       const SUPABASE_URL = 'https://dzvsnlxmihqsczgwvhag.supabase.co';
@@ -66,6 +66,10 @@
                 <div class="stat-row"><span class="stat-label">Active tasks</span><span class="stat-value" id="stat-active">0</span></div>
                 <div class="stat-row"><span class="stat-label">Completed tasks</span><span class="stat-value" id="stat-done">0</span></div>
                 <div class="stat-row"><span class="stat-label">Completed lists</span><span class="stat-value" id="stat-lists-done">0</span></div>
+                <div class="stat-row stat-row--focus">
+                    <span class="stat-label">Focus task</span>
+                    <button id="focus-toggle-stat-btn" class="stat-focus-toggle">On</button>
+                </div>
             </div>
         </div>
 
@@ -77,11 +81,12 @@
             <h1 id="page-title">My To-Do Lists</h1>
 
             <!-- FOCUS TASK OF THE DAY -->
+            <button id="focus-show-btn" style="display:none;" class="btn-focus-show">⚡ Show Focus Task</button>
             <div id="widget-focus" style="display:none;">
                 <div class="focus-card">
                     <div class="focus-card-label">
                         FOCUS TASK OF THE DAY
-                        <button id="focus-toggle-btn" class="btn-focus-toggle">◉ Focus On</button>
+                        <button id="focus-toggle-btn" class="btn-focus-toggle" title="Hide focus card">✕</button>
                     </div>
                     <div class="focus-card-list" id="focus-list-name"></div>
                     <div class="focus-card-task" id="focus-task-text">No tasks yet — add one below!</div>
