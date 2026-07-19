@@ -384,6 +384,8 @@ function renderListTabs() {
         if (!activeListInView && visibleLists.length > 0) {
             activeListId = visibleLists[0].id;
             activeView = 'all';
+            // Schedule a full render now that activeListId has changed
+            setTimeout(() => render(), 0);
         }
 
         visibleLists.forEach(list => {
