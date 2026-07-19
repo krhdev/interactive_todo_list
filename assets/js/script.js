@@ -379,6 +379,13 @@ function renderListTabs() {
 
         const visibleLists = activeCat === 'All' ? lists : lists.filter(l => (l.category || 'General') === activeCat);
 
+        // Auto-select first list in category if current list isn't visible in this category
+        const activeListInView = visibleLists.find(l => l.id === activeListId);
+        if (!activeListInView && visibleLists.length > 0) {
+            activeListId = visibleLists[0].id;
+            activeView = 'all';
+        }
+
         visibleLists.forEach(list => {
             const taskCount = todos.filter(t => t.listId === list.id && !t.done && !t.deleted && !t.parentId).length;
             const btn = document.createElement('button');
