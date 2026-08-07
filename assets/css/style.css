@@ -1285,3 +1285,111 @@ body, html {
 }
 
 .stat-focus-toggle:hover { opacity: 0.85; }
+
+/* ── Due dates ── */
+.due-date-btn {
+    padding: 3px 8px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    font-family: inherit;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: all 0.15s;
+    white-space: nowrap;
+}
+
+.due-date-btn:hover {
+    border-color: var(--brand);
+    color: var(--text);
+}
+
+.due-date-btn.overdue {
+    border-color: #e53935;
+    color: #e53935;
+    font-weight: 600;
+}
+
+.due-date-btn.due-soon {
+    border-color: #f0a500;
+    color: #f0a500;
+}
+
+.overdue-badge {
+    display: inline-block;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #ffffff;
+    background: #e53935;
+    border-radius: 10px;
+    padding: 1px 7px;
+    margin-left: 6px;
+    vertical-align: middle;
+    letter-spacing: 0.03em;
+}
+
+.task-item.overdue .task-text {
+    color: #e53935;
+}
+
+.due-date-picker {
+    position: absolute;
+    z-index: 100;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    box-shadow: 0 4px 16px var(--shadow);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 220px;
+}
+
+.due-date-picker input[type="date"],
+.due-date-picker input[type="time"] {
+    padding: 6px 10px;
+    border: 1px solid var(--input-border);
+    border-radius: 6px;
+    font-size: 0.88rem;
+    font-family: inherit;
+    background: var(--surface);
+    color: var(--text);
+    width: 100%;
+}
+
+.due-date-picker-actions {
+    display: flex;
+    gap: 6px;
+    justify-content: flex-end;
+}
+
+.btn-due-save {
+    padding: 5px 12px;
+    background: var(--brand);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 0.82rem;
+    font-family: inherit;
+    cursor: pointer;
+}
+
+.btn-due-clear {
+    padding: 5px 12px;
+    background: var(--btn-secondary-bg);
+    color: var(--btn-secondary-color);
+    border: none;
+    border-radius: 4px;
+    font-size: 0.82rem;
+    font-family: inherit;
+    cursor: pointer;
+}
+
+/* Overdue count in sidebar */
+.stat-row.overdue-stat .stat-value {
+    color: #e53935;
+    font-weight: 700;
+}

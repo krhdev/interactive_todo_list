@@ -128,7 +128,9 @@ async function loadFromCloud() {
         text:     t.text,
         done:     t.done,
         deleted:  t.deleted,
-        editing:  false
+        editing:  false,
+        dueDate:  t.due_date || null,
+        dueTime:  t.due_time || null
     }));
     // Preserve last active list if it still exists, otherwise use first
     const savedActive = localStorage.getItem('krhdev-active-list');
@@ -244,11 +246,11 @@ async function addTodo() {
     if (duplicate) { showWarning(input, 'That task already exists in this list.'); input.focus(); return; }
     clearWarning(input);
     if (useCloud) {
-        const { data, error } = await window.supabase.from('todos').insert({ user_id: currentUser.id, list_id: activeListId, text, done: false, deleted: false, parent_id: null }).select().single();
+        const { data, error } = await window.supabase.from('todos').insert({ user_id: currentUser.id, list_id: activeListId, text, done: false, deleted: false, parent_id: null, due_date: null, due_time: null }).select().single();
         if (error) { console.error(error); return; }
-        todos.push({ id: data.id, listId: data.list_id, parentId: null, text: data.text, done: false, deleted: false, editing: false });
+        todos.push({ id: data.id, listId: data.list_id, parentId: null, text: data.text, done: false, deleted: false, editing: false, dueDate: null, dueTime: null });
     } else {
-        const todo = { id: nextTodoId++, listId: activeListId, parentId: null, text, done: false, deleted: false, editing: false };
+        const todo = { id: nextTodoId++, listId: activeListId, parentId: null, text, done: false, deleted: false, editing: false, dueDate: null, dueTime: null };
         todos.push(todo);
         save();
     }
@@ -439,9 +441,19 @@ function renderTaskWidgets() {
     if (label && activeList) label.textContent = `— ${activeList.name}`;
     // Only top-level todos (no parentId)
     const listTodos = todos.filter(t => t.listId === activeListId && !t.parentId);
-    renderList('list-container',           'empty-active',    listTodos.filter(t => !t.done && !t.deleted), renderActiveItem);
-    renderList('completed-list-container', 'empty-completed', listTodos.filter(t => t.done && !t.deleted),  renderCompletedItem);
-    renderList('deleted-list-container',   'empty-deleted',   listTodos.filter(t => t.deleted),             renderDeletedItem);
+    // Sort active tasks: overdue first, then by due date, then no due date at end
+    const activeSorted = listTodos
+        .filter(t => !t.done && !t.deleted && !t.parentId)
+        .sort((a, b) => {
+            if (a.dueDate && b.dueDate) return a.dueDate.localeCompare(b.dueDate);
+            if (a.dueDate) return -1;
+            if (b.dueDate) return 1;
+            return 0;
+        });
+
+    renderList('list-container',           'empty-active',    activeSorted, renderActiveItem);
+    renderList('completed-list-container', 'empty-completed', listTodos.filter(t => t.done && !t.deleted && !t.parentId),  renderCompletedItem);
+    renderList('deleted-list-container',   'empty-deleted',   listTodos.filter(t => t.deleted && !t.parentId),             renderDeletedItem);
     const clearBtn = document.getElementById('clear-deleted-btn');
     if (clearBtn) clearBtn.style.display = listTodos.some(t => t.deleted) ? 'inline-block' : 'none';
 }
@@ -592,7 +604,33 @@ function renderActiveItem(todo) {
         deleteBtn.className = 'btn-delete'; deleteBtn.textContent = 'Delete';
         deleteBtn.addEventListener('click', () => deleteTodo(todo.id));
 
-        li.appendChild(checkbox); li.appendChild(span); li.appendChild(editBtn); li.appendChild(moveBtn); li.appendChild(deleteBtn);
+        // Due date button
+        const dueDateWrapper = document.createElement('div');
+        dueDateWrapper.style.position = 'relative';
+        dueDateWrapper.style.flexShrink = '0';
+        const dueBtn = document.createElement('button');
+        dueBtn.className = 'due-date-btn';
+        if (todo.dueDate) {
+            dueBtn.textContent = formatDueDate(todo);
+            if (isOverdue(todo)) dueBtn.classList.add('overdue');
+            else if (isDueSoon(todo)) dueBtn.classList.add('due-soon');
+        } else {
+            dueBtn.textContent = '📅';
+            dueBtn.title = 'Set due date';
+        }
+        dueBtn.addEventListener('click', e => { e.stopPropagation(); showDueDatePicker(todo, dueDateWrapper); });
+        dueDateWrapper.appendChild(dueBtn);
+
+        // Overdue badge on task text
+        if (isOverdue(todo)) {
+            const badge = document.createElement('span');
+            badge.className = 'overdue-badge';
+            badge.textContent = 'Overdue';
+            span.appendChild(badge);
+            li.classList.add('overdue');
+        }
+
+        li.appendChild(checkbox); li.appendChild(span); li.appendChild(dueDateWrapper); li.appendChild(editBtn); li.appendChild(moveBtn); li.appendChild(deleteBtn);
 
         li.setAttribute('draggable', 'true');
         li.addEventListener('dragstart', e => { e.dataTransfer.setData('text/plain', todo.id); li.classList.add('dragging'); });
@@ -715,10 +753,14 @@ function updateStats() {
     const activeEl    = document.getElementById('stat-active');
     const doneEl      = document.getElementById('stat-done');
     const listsDoneEl = document.getElementById('stat-lists-done');
+    const overdueTodos = todos.filter(t => isOverdue(t) && !t.parentId);
+    const overdueEl    = document.getElementById('stat-overdue');
+
     if (listsEl)     listsEl.textContent     = lists.length;
     if (activeEl)    activeEl.textContent    = activeTodos.length;
     if (doneEl)      doneEl.textContent      = doneTodos.length;
     if (listsDoneEl) listsDoneEl.textContent = completedLists.length;
+    if (overdueEl)   overdueEl.textContent   = overdueTodos.length;
 }
 
 // ── Change log ────────────────────────────────
@@ -735,6 +777,104 @@ function renderLog() {
         li.innerHTML = `${escapeHtml(entry.message)}<time>${entry.time}</time>`;
         container.appendChild(li);
     });
+}
+
+// ── Due date helpers ─────────────────────────
+function isOverdue(todo) {
+    if (!todo.dueDate || todo.done || todo.deleted) return false;
+    const today = new Date().toISOString().slice(0, 10);
+    return todo.dueDate < today;
+}
+
+function isDueSoon(todo) {
+    if (!todo.dueDate || todo.done || todo.deleted) return false;
+    const today = new Date();
+    const due   = new Date(todo.dueDate);
+    const diff  = (due - today) / (1000 * 60 * 60 * 24);
+    return diff >= 0 && diff <= 2;
+}
+
+function formatDueDate(todo) {
+    if (!todo.dueDate) return null;
+    const [y, m, d] = todo.dueDate.split('-');
+    const label = `${d}/${m}/${y}`;
+    if (todo.dueTime) return `${label} ${todo.dueTime.slice(0,5)}`;
+    return label;
+}
+
+async function saveDueDate(todoId, dueDate, dueTime) {
+    const todo = todos.find(t => t.id === todoId);
+    if (!todo) return;
+    todo.dueDate = dueDate || null;
+    todo.dueTime = dueTime || null;
+    if (useCloud) {
+        await window.supabase.from('todos').update({ due_date: todo.dueDate, due_time: todo.dueTime || null }).eq('id', todoId);
+    } else {
+        save();
+    }
+    render();
+}
+
+function showDueDatePicker(todo, anchorEl) {
+    // Remove any existing picker
+    document.querySelectorAll('.due-date-picker').forEach(p => p.remove());
+
+    const picker = document.createElement('div');
+    picker.className = 'due-date-picker';
+
+    const dateInput = document.createElement('input');
+    dateInput.type = 'date';
+    dateInput.value = todo.dueDate || '';
+
+    const timeInput = document.createElement('input');
+    timeInput.type = 'time';
+    timeInput.value = todo.dueTime ? todo.dueTime.slice(0,5) : '';
+
+    const timeLabel = document.createElement('label');
+    timeLabel.style.cssText = 'font-size:0.78rem;color:var(--text-muted)';
+    timeLabel.textContent = 'Time (optional)';
+
+    const actions = document.createElement('div');
+    actions.className = 'due-date-picker-actions';
+
+    const saveBtn = document.createElement('button');
+    saveBtn.className = 'btn-due-save';
+    saveBtn.textContent = 'Save';
+    saveBtn.addEventListener('click', async () => {
+        await saveDueDate(todo.id, dateInput.value, timeInput.value);
+        picker.remove();
+    });
+
+    const clearBtn = document.createElement('button');
+    clearBtn.className = 'btn-due-clear';
+    clearBtn.textContent = 'Clear';
+    clearBtn.addEventListener('click', async () => {
+        await saveDueDate(todo.id, null, null);
+        picker.remove();
+    });
+
+    actions.appendChild(clearBtn);
+    actions.appendChild(saveBtn);
+    picker.appendChild(dateInput);
+    picker.appendChild(timeLabel);
+    picker.appendChild(timeInput);
+    picker.appendChild(actions);
+
+    // Position near the anchor button
+    anchorEl.style.position = 'relative';
+    anchorEl.appendChild(picker);
+
+    // Close on outside click
+    setTimeout(() => {
+        document.addEventListener('click', function closePicker(e) {
+            if (!picker.contains(e.target) && e.target !== anchorEl) {
+                picker.remove();
+                document.removeEventListener('click', closePicker);
+            }
+        });
+    }, 0);
+
+    dateInput.focus();
 }
 
 // ── Focus Task ───────────────────────────────
