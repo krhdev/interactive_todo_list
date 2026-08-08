@@ -331,6 +331,7 @@ function render() {
     const focusShowBtn = document.getElementById('focus-show-btn');
     if (focusShowBtn) focusShowBtn.style.display = focusHidden ? 'inline-block' : 'none';
 
+    renderUpcomingPanel();
     renderFocusCard();
     renderListTabs();
     renderTaskWidgets();
@@ -614,6 +615,7 @@ function renderActiveItem(todo) {
             dueBtn.textContent = formatDueDate(todo);
             if (isOverdue(todo)) dueBtn.classList.add('overdue');
             else if (isDueSoon(todo)) dueBtn.classList.add('due-soon');
+            else dueBtn.classList.add('has-date');
         } else {
             dueBtn.textContent = '📅';
             dueBtn.title = 'Set due date';
@@ -875,6 +877,62 @@ function showDueDatePicker(todo, anchorEl) {
     }, 0);
 
     dateInput.focus();
+}
+
+// ── Upcoming / Overdue panel ─────────────────
+function renderUpcomingPanel() {
+    const widget = document.getElementById('widget-upcoming');
+    const ul     = document.getElementById('upcoming-list');
+    if (!widget || !ul) return;
+
+    const today    = new Date().toISOString().slice(0, 10);
+    const in2days  = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
+    // Tasks with due dates that aren't done or deleted
+    const dueTasks = todos
+        .filter(t => t.dueDate && !t.done && !t.deleted && !t.parentId)
+        .sort((a, b) => a.dueDate.localeCompare(b.dueDate));
+
+    if (dueTasks.length === 0) { widget.style.display = 'none'; return; }
+
+    widget.style.display = 'block';
+    ul.innerHTML = '';
+
+    dueTasks.forEach(todo => {
+        const list     = lists.find(l => l.id === todo.listId);
+        const overdue  = todo.dueDate < today;
+        const dueToday = todo.dueDate === today;
+        const dueSoon  = todo.dueDate <= in2days && !overdue && !dueToday;
+
+        const li = document.createElement('li');
+        li.className = 'upcoming-item' + (overdue ? ' overdue' : dueToday ? ' due-today' : dueSoon ? ' due-soon' : '');
+
+        const textSpan = document.createElement('span');
+        textSpan.className = 'upcoming-item-text';
+        textSpan.textContent = todo.text;
+        textSpan.title = todo.text;
+
+        const listSpan = document.createElement('span');
+        listSpan.className = 'upcoming-item-list';
+        listSpan.textContent = list ? list.name : '';
+
+        const dateSpan = document.createElement('span');
+        dateSpan.className = 'upcoming-item-date';
+        dateSpan.textContent = overdue ? `Overdue · ${formatDueDate(todo)}` : dueToday ? `Today${todo.dueTime ? ' · ' + todo.dueTime.slice(0,5) : ''}` : formatDueDate(todo);
+
+        // Click to jump to the list
+        li.style.cursor = 'pointer';
+        li.addEventListener('click', () => {
+            activeListId = todo.listId;
+            activeView   = 'all';
+            render();
+        });
+
+        li.appendChild(textSpan);
+        li.appendChild(listSpan);
+        li.appendChild(dateSpan);
+        ul.appendChild(li);
+    });
 }
 
 // ── Focus Task ───────────────────────────────
