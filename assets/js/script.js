@@ -444,8 +444,11 @@ function renderTaskWidgets() {
     const listTodos = todos.filter(t => t.listId === activeListId && !t.parentId);
     // Sort active tasks: overdue first, then by due date, then no due date at end
     const activeSorted = listTodos
-        .filter(t => !t.done && !t.deleted && !t.parentId)
+        .filter(t => !t.deleted && !t.parentId)
         .sort((a, b) => {
+            // Done tasks always go to bottom
+            if (a.done && !b.done) return 1;
+            if (!a.done && b.done) return -1;
             if (a.dueDate && b.dueDate) return a.dueDate.localeCompare(b.dueDate);
             if (a.dueDate) return -1;
             if (b.dueDate) return 1;
@@ -561,9 +564,10 @@ function renderActiveItem(todo) {
     } else {
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
+        checkbox.checked = todo.done;
         checkbox.addEventListener('change', () => toggleDone(todo.id));
         const span = document.createElement('span');
-        span.className = 'task-text'; span.textContent = todo.text;
+        span.className = 'task-text' + (todo.done ? ' done' : ''); span.textContent = todo.text;
 
         // Subtask progress indicator
         const subtasks = todos.filter(t => t.parentId === todo.id && !t.deleted);
@@ -676,6 +680,14 @@ async function toggleDone(id) {
     todo.done = !todo.done;
     if (useCloud) { await window.supabase.from('todos').update({ done: todo.done }).eq('id', id); } else { save(); }
     logChange(todo.done ? `Completed: "${todo.text}"` : `Reopened: "${todo.text}"`);
+
+    // Check if all tasks in this list are now done → auto switch to completed view
+    const listTasks = todos.filter(t => t.listId === todo.listId && !t.deleted && !t.parentId);
+    if (listTasks.length > 0 && listTasks.every(t => t.done)) {
+        activeView = 'completed';
+        logChange(`List complete! All tasks done.`);
+    }
+
     render();
 }
 
