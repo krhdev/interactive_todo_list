@@ -61,7 +61,7 @@ let nextTodoId = todos.length ? Math.max(...todos.map(t => t.id)) + 1 : 1;
 let activeListId = null;
 let activeView   = 'home';
 let focusTaskId      = localStorage.getItem('krhdev-focus-task') || null;
-let focusEnabled     = localStorage.getItem('krhdev-focus-enabled') !== 'false'; // default on
+let focusEnabled     = localStorage.getItem('krhdev-focus-enabled') !== 'false';
 
 function save() {
     localStorage.setItem('krhdev-lists', JSON.stringify(lists));
@@ -931,9 +931,24 @@ function initAuth() {
 
     if (!overlay) return;
 
-    // Direct Overlay visibility
-    overlay.style.display = 'flex';
+    // 1. Listen for persistent Supabase authentication session
+    if (window.supabase) {
+        window.supabase.auth.onAuthStateChange(async (event, session) => {
+            if (session?.user) {
+                currentUser = session.user;
+                useCloud = true;
+                overlay.style.display = 'none'; // Auto-hide when valid session exists
+                await loadFromCloud();
+            } else if (event === 'SIGNED_OUT') {
+                currentUser = null;
+                useCloud = false;
+                overlay.style.display = 'flex';
+                render();
+            }
+        });
+    }
 
+    // 2. Local-only mode skip button
     if (skipBtn) {
         skipBtn.addEventListener('click', () => {
             useCloud = false;
@@ -942,6 +957,7 @@ function initAuth() {
         });
     }
 
+    // 3. User login action
     if (submitBtn) {
         submitBtn.addEventListener('click', async () => {
             const email = document.getElementById('auth-email')?.value.trim();
@@ -956,12 +972,8 @@ function initAuth() {
             const { data, error } = await window.supabase.auth.signInWithPassword({ email, password });
             if (error) {
                 if (msg) msg.textContent = error.message;
-            } else {
-                currentUser = data.user;
-                useCloud = true;
-                overlay.style.display = 'none';
-                await loadFromCloud();
             }
+            // Handled dynamically by onAuthStateChange above!
         });
     }
 }
