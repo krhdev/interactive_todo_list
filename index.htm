@@ -22,10 +22,9 @@
 
     <script>
         const SUPABASE_URL = 'https://dzvsnlxmihqsczgwvhag.supabase.co';
-
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR6dnNubHhtaWhxc2N6Z3d2aGFnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI2ODg4NDgsImV4cCI6MjA5ODI2NDg0OH0.e8kXUW9mIK-4fCAflIUpESr6mjywABknafgocGP4YlM';
 
-        window.supabase = window.supabase.createClient(
+        window.supabase = supabase.createClient(
             SUPABASE_URL,
             SUPABASE_KEY
         );
@@ -33,158 +32,6 @@
 </head>
 
 <body>
-
-    <!-- =========================================================
-         AUTH OVERLAY
-         ========================================================= -->
-    <div id="auth-overlay" style="display:none;">
-
-        <div id="auth-card">
-
-            <img
-                src="./assets/images/todo-icon-192x192.png"
-                width="60"
-                alt="KRHDev To Do List"
-            >
-
-            <!-- =================================================
-                 SIGN IN / SIGN UP
-                 ================================================= -->
-            <div id="auth-main-form">
-
-                <h2 id="auth-title">
-                    Sign in to KRHDev To Do List
-                </h2>
-
-                <p id="auth-subtitle">
-                    Save your lists across all your devices
-                </p>
-
-                <div class="add-form">
-                    <input
-                        type="email"
-                        id="auth-email"
-                        placeholder="Email address"
-                        autocomplete="email"
-                    >
-                </div>
-
-                <div class="add-form">
-                    <input
-                        type="password"
-                        id="auth-password"
-                        placeholder="Password"
-                        autocomplete="current-password"
-                    >
-                </div>
-
-                <button id="auth-submit-btn">
-                    Sign In
-                </button>
-
-                <!-- PASSWORD RESET LINK -->
-                <p id="forgot-password-row">
-                    <a href="#" id="forgot-password-link">
-                        Forgot password?
-                    </a>
-                </p>
-
-                <p id="auth-toggle">
-                    Don't have an account?
-                    <a href="#" id="auth-switch">Sign Up</a>
-                </p>
-
-                <p id="auth-msg"></p>
-
-                <hr>
-
-                <button id="auth-skip-btn">
-                    Continue without signing in
-                </button>
-
-            </div>
-
-
-            <!-- =================================================
-                 FORGOT PASSWORD
-                 ================================================= -->
-            <div id="auth-reset-request" style="display:none;">
-
-                <h2>
-                    Reset your password
-                </h2>
-
-                <p>
-                    Enter your email address and we'll send you a
-                    password reset link.
-                </p>
-
-                <div class="add-form">
-                    <input
-                        type="email"
-                        id="reset-email"
-                        placeholder="Email address"
-                        autocomplete="email"
-                    >
-                </div>
-
-                <button id="reset-email-btn">
-                    Send Reset Email
-                </button>
-
-                <p id="reset-msg"></p>
-
-                <p>
-                    <a href="#" id="back-to-signin">
-                        ← Back to Sign In
-                    </a>
-                </p>
-
-            </div>
-
-
-            <!-- =================================================
-                 NEW PASSWORD
-                 ================================================= -->
-            <div id="auth-new-password" style="display:none;">
-
-                <h2>
-                    Choose a new password
-                </h2>
-
-                <p>
-                    Enter your new password below.
-                </p>
-
-                <div class="add-form">
-                    <input
-                        type="password"
-                        id="new-password"
-                        placeholder="New password"
-                        autocomplete="new-password"
-                    >
-                </div>
-
-                <div class="add-form">
-                    <input
-                        type="password"
-                        id="confirm-password"
-                        placeholder="Confirm new password"
-                        autocomplete="new-password"
-                    >
-                </div>
-
-                <button id="update-password-btn">
-                    Update Password
-                </button>
-
-                <p id="new-password-msg"></p>
-
-            </div>
-
-        </div>
-    </div>
-
 
     <!-- =========================================================
          MAIN APP
@@ -617,6 +464,152 @@
                 </p>
 
                 <ul id="recent-changes-container"></ul>
+
+            </div>
+
+        </div>
+    </div>
+
+
+    <!-- =========================================================
+         AUTH OVERLAY MODAL
+         ========================================================= -->
+    <div id="auth-overlay" class="auth-overlay" style="display:none;">
+
+        <div id="auth-card">
+
+            <img
+                src="./assets/images/todo-icon-192x192.png"
+                width="60"
+                alt="KRHDev To Do List"
+            >
+
+            <!-- SIGN IN / SIGN UP -->
+            <div id="auth-main-form">
+
+                <h2 id="auth-title">
+                    Sign in to KRHDev To Do List
+                </h2>
+
+                <p id="auth-subtitle">
+                    Save your lists across all your devices
+                </p>
+
+                <div class="add-form">
+                    <input
+                        type="email"
+                        id="auth-email"
+                        placeholder="Email address"
+                        autocomplete="email"
+                    >
+                </div>
+
+                <div class="add-form">
+                    <input
+                        type="password"
+                        id="auth-password"
+                        placeholder="Password"
+                        autocomplete="current-password"
+                    >
+                </div>
+
+                <button id="auth-submit-btn">
+                    Sign In
+                </button>
+
+                <!-- PASSWORD RESET LINK -->
+                <p id="forgot-password-row">
+                    <a href="#" id="forgot-password-link">
+                        Forgot password?
+                    </a>
+                </p>
+
+                <p id="auth-toggle">
+                    Don't have an account?
+                    <a href="#" id="auth-switch">Sign Up</a>
+                </p>
+
+                <p id="auth-msg"></p>
+
+                <hr>
+
+                <button id="auth-skip-btn">
+                    Continue without signing in
+                </button>
+
+            </div>
+
+
+            <!-- FORGOT PASSWORD -->
+            <div id="auth-reset-request" style="display:none;">
+
+                <h2>
+                    Reset your password
+                </h2>
+
+                <p>
+                    Enter your email address and we'll send you a
+                    password reset link.
+                </p>
+
+                <div class="add-form">
+                    <input
+                        type="email"
+                        id="reset-email"
+                        placeholder="Email address"
+                        autocomplete="email"
+                    >
+                </div>
+
+                <button id="reset-email-btn">
+                    Send Reset Email
+                </button>
+
+                <p id="reset-msg"></p>
+
+                <p>
+                    <a href="#" id="back-to-signin">
+                        ← Back to Sign In
+                    </a>
+                </p>
+
+            </div>
+
+
+            <!-- NEW PASSWORD -->
+            <div id="auth-new-password" style="display:none;">
+
+                <h2>
+                    Choose a new password
+                </h2>
+
+                <p>
+                    Enter your new password below.
+                </p>
+
+                <div class="add-form">
+                    <input
+                        type="password"
+                        id="new-password"
+                        placeholder="New password"
+                        autocomplete="new-password"
+                    >
+                </div>
+
+                <div class="add-form">
+                    <input
+                        type="password"
+                        id="confirm-password"
+                        placeholder="Confirm new password"
+                        autocomplete="new-password"
+                    >
+                </div>
+
+                <button id="update-password-btn">
+                    Update Password
+                </button>
+
+                <p id="new-password-msg"></p>
 
             </div>
 
