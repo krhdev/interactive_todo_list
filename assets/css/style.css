@@ -274,115 +274,169 @@ body, html {
 #save-name-btn:hover,
 #auth-submit-btn:hover { background: var(--brand-dark); }
 
-/* ── Auth overlay ── */
-#auth-overlay {
-    position: fixed;
-    inset: 0;
-    background: var(--bg);
-    z-index: 999;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
+/* =========================================================
+   AUTH OVERLAY & CARD STYLING
+   ========================================================= */
+
+/* Dimmed backdrop with glassmorphic blur */
+.auth-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(15, 23, 42, 0.65); /* Modern deep slate backdrop */
+  backdrop-filter: blur(8px);
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
 }
 
+/* Auth Card Container */
 #auth-card {
-    background: var(--surface);
-    border-radius: 12px;
-    padding: 36px 32px;
-    width: 100%;
-    max-width: 400px;
-    box-shadow: 0 8px 32px var(--shadow);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 14px;
+  background: #ffffff;
+  width: 100%;
+  max-width: 380px;
+  padding: 2.5rem 2rem;
+  border-radius: 16px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  text-align: center;
+  transition: all 0.2s ease-in-out;
 }
 
+/* Logo Image Header */
 #auth-card img {
-    width: 64px;
-    height: 64px;
-    border-radius: 14px;
-    margin-bottom: 4px;
+  width: 56px;
+  height: 56px;
+  margin-bottom: 1rem;
+  border-radius: 12px;
+  object-fit: contain;
 }
 
-#auth-title {
-    font-size: 1.2rem;
-    font-weight: 500;
-    color: var(--brand);
-    text-align: center;
-    margin: 0;
+/* Titles & Subtitles */
+#auth-card h2 {
+  color: #510061; /* Matches your brand theme color */
+  font-size: 1.35rem;
+  font-weight: 600;
+  margin: 0 0 0.4rem 0;
+  letter-spacing: -0.01em;
 }
 
-[data-theme="dark"] #auth-title {
-    color: var(--brand-readable);
-}
-
+#auth-card p, 
 #auth-subtitle {
-    font-size: 0.88rem;
-    color: var(--text-muted);
-    text-align: center;
-    margin: 0;
+  color: #64748b;
+  font-size: 0.875rem;
+  margin-bottom: 1.5rem;
+  line-height: 1.4;
 }
 
+/* Input Fields Wrapper */
 #auth-card .add-form {
-    width: 100%;
-    margin: 0;
+  margin-bottom: 0.85rem;
 }
 
-#auth-card .add-form input {
-    width: 100%;
+/* Inputs Styling */
+#auth-card input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  font-size: 0.95rem;
+  color: #1e293b;
+  background-color: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 8px;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
 
-#auth-submit-btn {
-    width: 100%;
-    padding: 11px;
-    font-size: 1rem;
+#auth-card input:focus {
+  border-color: #510061;
+  background-color: #ffffff;
+  box-shadow: 0 0 0 3px rgba(81, 0, 97, 0.15);
 }
 
+/* Primary Action Buttons */
+#auth-card button {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #ffffff;
+  background-color: #510061;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  margin-top: 0.5rem;
+  transition: background-color 0.2s, transform 0.1s;
+}
+
+#auth-card button:hover {
+  background-color: #3b0047;
+}
+
+#auth-card button:active {
+  transform: scale(0.98);
+}
+
+/* Links (Forgot Password & Toggle) */
+#forgot-password-row, 
 #auth-toggle {
-    font-size: 0.85rem;
-    color: var(--text-muted);
-    text-align: center;
+  font-size: 0.85rem;
+  margin: 1rem 0 0 0;
+  color: #64748b;
 }
 
-#auth-toggle a {
-    color: var(--brand);
-    text-decoration: none;
-    font-weight: 500;
+#auth-card a {
+  color: #510061;
+  font-weight: 500;
+  text-decoration: none;
+  transition: color 0.15s;
 }
 
-[data-theme="dark"] #auth-toggle a {
-    color: var(--brand-readable);
+#auth-card a:hover {
+  text-decoration: underline;
+  color: #3b0047;
 }
 
-#auth-msg {
-    font-size: 0.85rem;
-    color: #e53935;
-    text-align: center;
-    min-height: 20px;
-}
-
-#auth-msg.success { color: #43a047; }
-
+/* Divider Rule */
 #auth-card hr {
-    width: 100%;
-    border: none;
-    border-top: 1px solid var(--border);
+  border: none;
+  border-top: 1px solid #f1f5f9;
+  margin: 1.5rem 0 1.25rem 0;
 }
 
+/* Secondary Action Button (Offline Skip) */
 #auth-skip-btn {
-    background: none;
-    border: none;
-    color: var(--text-muted);
-    font-size: 0.85rem;
-    cursor: pointer;
-    font-family: inherit;
-    text-decoration: underline;
-    padding: 0;
+  background-color: transparent !important;
+  color: #64748b !important;
+  font-weight: 500 !important;
+  border: 1px solid #cbd5e1 !important;
+  margin-top: 0 !important;
 }
 
-#auth-skip-btn:hover { color: var(--text); }
+#auth-skip-btn:hover {
+  background-color: #f8fafc !important;
+  color: #334155 !important;
+  border-color: #94a3b8 !important;
+}
+
+/* Error & Success Messages */
+#auth-msg, 
+#reset-msg, 
+#new-password-msg {
+  font-size: 0.85rem;
+  margin-top: 0.75rem;
+  margin-bottom: 0;
+  color: #dc2626; /* Clean red */
+}
+
+#auth-msg.success, 
+#reset-msg.success, 
+#new-password-msg.success {
+  color: #16a34a; /* Clean green */
+}
 
 /* ── List tabs ── */
 .list-tabs {
