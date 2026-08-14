@@ -1,625 +1,153 @@
 <!DOCTYPE html>
-<html lang="en">
-
+<html lang="en" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="theme-color" content="#510061">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="To Do List">
-
-    <link rel="manifest" href="./manifest.json">
-    <link rel="icon" href="./favicon.ico" type="image/x-icon">
-    <link rel="apple-touch-icon" sizes="192x192" href="./assets/images/todo-icon-192x192.png">
-    <link rel="apple-touch-icon" sizes="512x512" href="./assets/images/todo-icon-512x512.png">
-
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="./assets/css/style.css">
-
+    <title>Kat's To Do List</title>
+    <!-- Prevent caching while developing -->
+    <link rel="stylesheet" href="assets/css/style.css?v=2.0">
+    <!-- Supabase JS CDN -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-    <script>
-        const SUPABASE_URL = 'https://dzvsnlxmihqsczgwvhag.supabase.co';
-        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR6dnNubHhtaWhxc2N6Z3d2aGFnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI2ODg4NDgsImV4cCI6MjA5ODI2NDg0OH0.e8kXUW9mIK-4fCAflIUpESr6mjywABknafgocGP4YlM';
-
-        window.supabase = supabase.createClient(
-            SUPABASE_URL,
-            SUPABASE_KEY
-        );
-    </script>
 </head>
-
 <body>
 
-    <!-- =========================================================
-         MAIN APP
-         ========================================================= -->
-
-    <div class="container">
-
-        <div class="sidebar" id="sidebar">
-
-            <div class="sidebar-header">
-
-                <img
-                    src="./assets/images/todo-icon-192x192.png"
-                    alt="KRHDev To Do List icon"
-                >
-
-                <h2 id="sidebar-title" data-suffix="app">
-                    KRHDev's To Do List App
-                </h2>
-
-                <button
-                    class="hamburger"
-                    id="sidebar-toggle"
-                    aria-label="Close menu"
-                >
-                    ✕
-                </button>
-
-            </div>
-
-            <ul>
-                <li><a href="#" data-view="home">Home</a></li>
-                <li><a href="#" data-view="all">View Lists</a></li>
-                <li><a href="#" data-view="completed">View Completed</a></li>
-                <li><a href="#" data-view="deleted">View Deleted</a></li>
-                <li><a href="#" data-view="log">Recent Changes</a></li>
-                <li><a href="help.htm">Help</a></li>
-                <li><a href="settings.htm">Settings</a></li>
-            </ul>
-
-            <div class="sidebar-stats">
-
-                <div class="stat-row">
-                    <span class="stat-label">Lists</span>
-                    <span class="stat-value" id="stat-lists">0</span>
-                </div>
-
-                <div class="stat-row">
-                    <span class="stat-label">Active tasks</span>
-                    <span class="stat-value" id="stat-active">0</span>
-                </div>
-
-                <div class="stat-row">
-                    <span class="stat-label">Completed tasks</span>
-                    <span class="stat-value" id="stat-done">0</span>
-                </div>
-
-                <div class="stat-row">
-                    <span class="stat-label">Completed lists</span>
-                    <span class="stat-value" id="stat-lists-done">0</span>
-                </div>
-
-                <div class="stat-row overdue-stat">
-                    <span class="stat-label">Overdue</span>
-                    <span class="stat-value" id="stat-overdue">0</span>
-                </div>
-
-                <div class="stat-row stat-row--focus">
-                    <span class="stat-label">Focus task</span>
-                    <button
-                        id="focus-toggle-stat-btn"
-                        class="stat-focus-toggle"
-                    >
-                        On
-                    </button>
-                </div>
-
+    <!-- AUTHENTICATION OVERLAY -->
+    <div id="auth-overlay">
+        <div class="auth-modal">
+            <h2>Welcome Back</h2>
+            <p style="font-size:0.9rem; color:var(--text-secondary);">Sign in to sync your tasks to the cloud, or skip to use locally.</p>
+            <input type="email" id="auth-email" placeholder="Email address">
+            <input type="password" id="auth-password" placeholder="Password">
+            <p id="auth-msg" style="color:var(--danger-color); font-size:0.85rem;"></p>
+            <div class="auth-modal-btns">
+                <button id="auth-submit-btn" style="flex:1;">Log In</button>
+                <button id="auth-skip-btn" class="btn-secondary" style="flex:1;">Skip (Local Mode)</button>
             </div>
         </div>
+    </div>
 
+    <!-- MAIN APP WRAPPER -->
+    <div id="app-container">
 
-        <div class="main-content">
+        <!-- SIDEBAR -->
+        <aside id="sidebar">
+            <h2 id="sidebar-title" data-suffix="app">Kat's To Do List</h2>
+            
+            <nav class="sidebar-nav">
+                <ul style="display:flex; flex-direction:column; gap:0.5rem;">
+                    <li><a href="#" data-view="home">Home</a></li>
+                    <li><a href="#" data-view="all">View Lists</a></li>
+                    <li><a href="#" data-view="completed">Completed Tasks</a></li>
+                    <li><a href="#" data-view="deleted">Deleted Tasks</a></li>
+                    <li><a href="#" data-view="log">Recent Changes</a></li>
+                </ul>
+            </nav>
 
-            <div class="mobile-topbar">
-
-                <button
-                    class="hamburger"
-                    id="sidebar-open"
-                    aria-label="Open menu"
-                >
-                    ☰
-                </button>
-
-                <span
-                    class="mobile-title"
-                    id="mobile-title"
-                >
-                    KRHDev's To Do List
-                </span>
-
-            </div>
-
-            <h1 id="page-title">
-                My To-Do Lists
-            </h1>
-
-
-            <!-- FOCUS TASK OF THE DAY -->
-
-            <button
-                id="focus-show-btn"
-                style="display:none;"
-                class="btn-focus-show"
-            >
-                ⚡ Show Focus Task
-            </button>
-
-            <div id="widget-focus" style="display:none;">
-
-                <div class="focus-card">
-
-                    <div class="focus-card-label">
-
-                        FOCUS TASK OF THE DAY
-
-                        <button
-                            id="focus-toggle-btn"
-                            class="btn-focus-toggle"
-                            title="Hide focus card"
-                        >
-                            ✕
-                        </button>
-
-                    </div>
-
-                    <div
-                        class="focus-card-list"
-                        id="focus-list-name"
-                    ></div>
-
-                    <div
-                        class="focus-card-task"
-                        id="focus-task-text"
-                    >
-                        No tasks yet — add one below!
-                    </div>
-
-                    <div class="focus-card-actions">
-
-                        <button
-                            class="btn-focus-done"
-                            id="focus-done-btn"
-                        >
-                            ✓ Done
-                        </button>
-
-                        <button
-                            class="btn-focus-reroll"
-                            id="focus-reroll-btn"
-                        >
-                            ↺ Re-roll
-                        </button>
-
-                        <button
-                            class="btn-focus-clear"
-                            id="focus-clear-btn"
-                        >
-                            Clear focus
-                        </button>
-
-                    </div>
-
+            <div class="sidebar-stats" style="margin-top:auto; font-size:0.85rem; display:flex; flex-direction:column; gap:0.35rem; color:var(--text-secondary);">
+                <div>Lists: <strong id="stat-lists">0</strong></div>
+                <div>Active tasks: <strong id="stat-active">0</strong></div>
+                <div>Completed tasks: <strong id="stat-done">0</strong></div>
+                <div>Completed lists: <strong id="stat-lists-done">0</strong></div>
+                <div>Overdue: <strong id="stat-overdue">0</strong></div>
+                <div style="margin-top:0.5rem; display:flex; align-items:center; justify-content:space-between;">
+                    <span>Focus task:</span>
+                    <button id="focus-toggle-stat-btn" class="btn-secondary" style="padding:0.2rem 0.5rem; font-size:0.75rem;">On</button>
                 </div>
+            </div>
+        </aside>
 
+        <!-- MAIN CONTENT AREA -->
+        <main id="main-content">
+            <h1 id="page-title">View Lists</h1>
+
+            <!-- FOCUS TASK CARD -->
+            <div id="widget-focus" class="subtask-container" style="display:none; margin-bottom:1.5rem; background:var(--bg-secondary);">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+                    <span id="focus-list-name" style="font-size:0.75rem; font-weight:bold; color:var(--text-muted);">FOCUS TASK</span>
+                    <div>
+                        <button id="focus-reroll-btn" class="btn-secondary" style="padding:0.2rem 0.5rem; font-size:0.75rem;">🔀 Next</button>
+                        <button id="focus-toggle-btn" class="btn-secondary" style="padding:0.2rem 0.5rem; font-size:0.75rem;">Hide</button>
+                    </div>
+                </div>
+                <div id="focus-task-text" style="font-size:1.1rem; font-weight:600; margin-bottom:0.75rem;"></div>
+                <button id="focus-done-btn" style="font-size:0.8rem;">✓ Mark Done</button>
             </div>
 
-
-            <!-- UPCOMING / OVERDUE PANEL -->
-
-            <div
-                id="widget-upcoming"
-                class="upcoming-panel"
-                style="display:none;"
-            >
-
-                <h2>
-                    ⚡ Upcoming &amp; Overdue
-                </h2>
-
-                <ul
-                    id="upcoming-list"
-                    class="upcoming-list"
-                ></ul>
-
+            <!-- UPCOMING OVERDUE WIDGET -->
+            <div id="widget-upcoming" style="display:none; margin-bottom:1.5rem;">
+                <h3>⚠️ Urgent / Overdue Tasks</h3>
+                <ul id="upcoming-list" style="margin-top:0.5rem;"></ul>
             </div>
 
-
-            <!-- CREATE LIST -->
-
-            <div class="widget">
-
-                <h2>New List</h2>
-
-                <div class="add-form">
-
-                    <input
-                        type="text"
-                        id="new-list"
-                        placeholder="Enter list name"
-                    >
-
-                    <select
-                        id="new-list-category"
-                        class="category-select"
-                    >
-
-                        <option value="General">
-                            Category
-                        </option>
-
-                        <option value="General">
-                            General
-                        </option>
-
-                        <option value="Today">
-                            📌 Today
-                        </option>
-
-                        <option value="Daily">
-                            🔁 Daily
-                        </option>
-
-                        <option value="Weekly">
-                            📅 Weekly
-                        </option>
-
-                        <option value="Training">
-                            📚 Training
-                        </option>
-
-                        <option value="Research">
-                            🔬 Research
-                        </option>
-
-                        <option value="Personal Projects">
-                            🗂️ Personal Projects
-                        </option>
-
-                        <option value="__new__">
-                            ＋ New category...
-                        </option>
-
+            <!-- CREATE NEW LIST SECTION -->
+            <section id="widget-create-list" style="margin-bottom:1.5rem;">
+                <h3>New List</h3>
+                <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-top:0.5rem;">
+                    <input type="text" id="new-list" placeholder="Enter list name..." style="flex:1; min-width:200px;">
+                    <select id="new-list-category">
+                        <option value="General">General</option>
+                        <option value="Business">Business</option>
+                        <option value="Daily">Daily</option>
+                        <option value="Weekly">Weekly</option>
+                        <option value="__new__">+ Custom Category</option>
                     </select>
-
-                    <button id="add-list-btn">
-                        Create List
-                    </button>
-
+                    <button id="add-list-btn">Create List</button>
                 </div>
-
-                <div
-                    id="new-category-row"
-                    style="display:none; margin-top:8px; gap:8px;"
-                    class="add-form"
-                >
-
-                    <input
-                        type="text"
-                        id="new-category-input"
-                        placeholder="Type new category name"
-                    >
-
-                    <button
-                        type="button"
-                        id="new-category-confirm-btn"
-                    >
-                        Add
-                    </button>
-
+                <div id="new-category-row" style="display:none; margin-top:0.5rem;">
+                    <input type="text" id="new-category-input" placeholder="Category name..." style="width:100%;">
                 </div>
+            </section>
 
-            </div>
+            <!-- LIST TABS & CATEGORIES -->
+            <section id="widget-list-selector">
+                <h3>Your Lists</h3>
+                <div id="category-pills"></div>
+                <div id="list-tabs"></div>
+            </section>
 
-
-            <!-- LIST SELECTOR -->
-
-            <div
-                class="widget"
-                id="widget-list-selector"
-                style="display:none;"
-            >
-
-                <h2>Your Lists</h2>
-
-                <div
-                    class="category-pills"
-                    id="category-pills"
-                ></div>
-
-                <div
-                    id="list-tabs"
-                    class="list-tabs"
-                ></div>
-
-            </div>
-
-
-            <!-- ADD TASK -->
-
-            <div
-                class="widget"
-                id="widget-add-task"
-                style="display:none;"
-            >
-
-                <h2>
-                    Add a Task
-                    <span
-                        id="active-list-label"
-                        class="active-list-label"
-                    ></span>
-                </h2>
-
-                <div class="add-form">
-
-                    <input
-                        type="text"
-                        id="new-todo"
-                        placeholder="What needs doing?"
-                    >
-
-                    <button id="add-btn">
-                        Add Task
-                    </button>
-
+            <!-- ADD TASK SECTION -->
+            <section id="widget-add-task" style="margin-top:1.5rem;">
+                <h3>Add a Task <span id="active-list-label"></span></h3>
+                <div style="display:flex; gap:0.5rem; margin-top:0.5rem;">
+                    <input type="text" id="new-todo" placeholder="What needs doing?" style="flex:1;">
+                    <button id="add-btn">Add Task</button>
                 </div>
+            </section>
 
-            </div>
+            <!-- ACTIVE TASKS LIST -->
+            <section id="widget-all" style="margin-top:1.5rem;">
+                <h3>Active Tasks</h3>
+                <p id="empty-active" style="color:var(--text-muted); margin-top:0.5rem;">No active tasks in this list.</p>
+                <ul id="list-container" class="task-list"></ul>
+            </section>
 
+            <!-- COMPLETED TASKS VIEW -->
+            <section id="widget-completed" style="display:none; margin-top:1.5rem;">
+                <h3>Completed Tasks</h3>
+                <p id="empty-completed" style="color:var(--text-muted); margin-top:0.5rem;">No completed tasks yet.</p>
+                <ul id="completed-list-container" class="task-list"></ul>
+            </section>
 
-            <!-- ACTIVE TASKS -->
+            <!-- DELETED TASKS VIEW -->
+            <section id="widget-deleted" style="display:none; margin-top:1.5rem;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <h3>Deleted Tasks</h3>
+                    <button id="clear-deleted-btn" class="btn-delete" style="display:none;">Clear Permanently</button>
+                </div>
+                <p id="empty-deleted" style="color:var(--text-muted); margin-top:0.5rem;">Bin is empty.</p>
+                <ul id="deleted-list-container" class="task-list"></ul>
+            </section>
 
-            <div
-                class="widget"
-                id="widget-all"
-                style="display:none;"
-            >
-
-                <h2>Active Tasks</h2>
-
-                <p
-                    class="empty-msg"
-                    id="empty-active"
-                >
-                    No active tasks. Add one above!
-                </p>
-
-                <ul id="list-container"></ul>
-
-            </div>
-
-
-            <!-- COMPLETED TASKS -->
-
-            <div
-                class="widget"
-                id="widget-completed"
-                style="display:none;"
-            >
-
-                <h2>Completed Tasks</h2>
-
-                <p
-                    class="empty-msg"
-                    id="empty-completed"
-                >
-                    No completed tasks yet.
-                </p>
-
-                <ul id="completed-list-container"></ul>
-
-            </div>
-
-
-            <!-- DELETED TASKS -->
-
-            <div
-                class="widget"
-                id="widget-deleted"
-                style="display:none;"
-            >
-
-                <h2>Deleted Tasks</h2>
-
-                <p
-                    class="empty-msg"
-                    id="empty-deleted"
-                >
-                    Nothing deleted.
-                </p>
-
-                <ul id="deleted-list-container"></ul>
-
-                <button
-                    id="clear-deleted-btn"
-                    class="btn-secondary"
-                    style="display:none;"
-                >
-                    Clear Deleted
-                </button>
-
-            </div>
-
-
-            <!-- RECENT CHANGES -->
-
-            <div
-                class="widget"
-                id="widget-log"
-                style="display:none;"
-            >
-
-                <h2>Recent Changes</h2>
-
-                <p
-                    class="empty-msg"
-                    id="empty-log"
-                >
-                    No changes yet.
-                </p>
-
-                <ul id="recent-changes-container"></ul>
-
-            </div>
-
-        </div>
+            <!-- CHANGE LOG VIEW -->
+            <section id="widget-log" style="display:none; margin-top:1.5rem;">
+                <h3>Recent Activity</h3>
+                <p id="empty-log" style="color:var(--text-muted); margin-top:0.5rem;">No recent logs.</p>
+                <ul id="recent-changes-container" style="display:flex; flex-direction:column; gap:0.5rem; margin-top:0.5rem; font-family:monospace; font-size:0.85rem;"></ul>
+            </section>
+        </main>
     </div>
 
-
-    <!-- =========================================================
-         AUTH OVERLAY MODAL
-         ========================================================= -->
-    <div id="auth-overlay" class="auth-overlay" style="display:none;">
-
-        <div id="auth-card">
-
-            <img
-                src="./assets/images/todo-icon-192x192.png"
-                width="60"
-                alt="KRHDev To Do List"
-            >
-
-            <!-- SIGN IN / SIGN UP -->
-            <div id="auth-main-form">
-
-                <h2 id="auth-title">
-                    Sign in to KRHDev To Do List
-                </h2>
-
-                <p id="auth-subtitle">
-                    Save your lists across all your devices
-                </p>
-
-                <div class="add-form">
-                    <input
-                        type="email"
-                        id="auth-email"
-                        placeholder="Email address"
-                        autocomplete="email"
-                    >
-                </div>
-
-                <div class="add-form">
-                    <input
-                        type="password"
-                        id="auth-password"
-                        placeholder="Password"
-                        autocomplete="current-password"
-                    >
-                </div>
-
-                <button id="auth-submit-btn">
-                    Sign In
-                </button>
-
-                <!-- PASSWORD RESET LINK -->
-                <p id="forgot-password-row">
-                    <a href="#" id="forgot-password-link">
-                        Forgot password?
-                    </a>
-                </p>
-
-                <p id="auth-toggle">
-                    Don't have an account?
-                    <a href="#" id="auth-switch">Sign Up</a>
-                </p>
-
-                <p id="auth-msg"></p>
-
-                <hr>
-
-                <button id="auth-skip-btn">
-                    Continue without signing in
-                </button>
-
-            </div>
-
-
-            <!-- FORGOT PASSWORD -->
-            <div id="auth-reset-request" style="display:none;">
-
-                <h2>
-                    Reset your password
-                </h2>
-
-                <p>
-                    Enter your email address and we'll send you a
-                    password reset link.
-                </p>
-
-                <div class="add-form">
-                    <input
-                        type="email"
-                        id="reset-email"
-                        placeholder="Email address"
-                        autocomplete="email"
-                    >
-                </div>
-
-                <button id="reset-email-btn">
-                    Send Reset Email
-                </button>
-
-                <p id="reset-msg"></p>
-
-                <p>
-                    <a href="#" id="back-to-signin">
-                        ← Back to Sign In
-                    </a>
-                </p>
-
-            </div>
-
-
-            <!-- NEW PASSWORD -->
-            <div id="auth-new-password" style="display:none;">
-
-                <h2>
-                    Choose a new password
-                </h2>
-
-                <p>
-                    Enter your new password below.
-                </p>
-
-                <div class="add-form">
-                    <input
-                        type="password"
-                        id="new-password"
-                        placeholder="New password"
-                        autocomplete="new-password"
-                    >
-                </div>
-
-                <div class="add-form">
-                    <input
-                        type="password"
-                        id="confirm-password"
-                        placeholder="Confirm new password"
-                        autocomplete="new-password"
-                    >
-                </div>
-
-                <button id="update-password-btn">
-                    Update Password
-                </button>
-
-                <p id="new-password-msg"></p>
-
-            </div>
-
-        </div>
-    </div>
-
-
-    <script src="./assets/js/script.js"></script>
-    <script src="./assets/js/json-io.js"></script>
-    <script src="./assets/js/pwa-install.js"></script>
-
+    <!-- JS script attached with cache-busting parameter -->
+    <script src="assets/js/script.js?v=2.0"></script>
 </body>
 </html>
