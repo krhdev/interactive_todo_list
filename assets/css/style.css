@@ -2,7 +2,7 @@
    KRHDev Todo App – CSS Stylesheet
 ───────────────────────────────────────────── */
 
-/* Root theme colors & properties */
+/* --- CSS Variables / Themes --- */
 :root {
     --bg-primary: #f8fafc;
     --bg-surface: #ffffff;
@@ -11,17 +11,15 @@
     --text-secondary: #475569;
     --text-muted: #94a3b8;
     --border-color: #e2e8f0;
-    --accent-color: #3b82f6;
-    --accent-hover: #2563eb;
+    --accent-color: #581c87;
+    --accent-hover: #3b0764;
     --danger-color: #ef4444;
     --danger-hover: #dc2626;
-    --success-color: #22c55e;
-    --warning-color: #f59e0b;
-    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
     --radius-sm: 0.375rem;
     --radius-md: 0.5rem;
     --radius-lg: 0.75rem;
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
 }
 
 [data-theme="dark"] {
@@ -32,10 +30,11 @@
     --text-secondary: #cbd5e1;
     --text-muted: #64748b;
     --border-color: #334155;
-    --accent-color: #3b82f6;
-    --accent-hover: #60a5fa;
+    --accent-color: #7e22ce;
+    --accent-hover: #9333ea;
 }
 
+/* --- Base Resets --- */
 * {
     box-sizing: border-box;
     margin: 0;
@@ -51,7 +50,32 @@ body {
     min-height: 100vh;
 }
 
-/* Modal Overlay fixed & isolated layout */
+ul, ol {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+/* --- Layout Containers --- */
+#sidebar {
+    width: 280px;
+    background: var(--bg-surface);
+    border-right: 1px solid var(--border-color);
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    flex-shrink: 0;
+}
+
+#main-content {
+    flex: 1;
+    padding: 2rem;
+    overflow-y: auto;
+    max-width: 900px;
+}
+
+/* --- Authentication Modal --- */
 #auth-overlay {
     position: fixed;
     top: 0;
@@ -71,17 +95,12 @@ body {
     padding: 2rem;
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-md);
-    width: 100%;
+    width: 90%;
     max-width: 400px;
     display: flex;
     flex-direction: column;
     gap: 1rem;
     border: 1px solid var(--border-color);
-}
-
-.auth-modal h2 {
-    color: var(--text-primary);
-    font-size: 1.5rem;
 }
 
 .auth-modal input {
@@ -93,53 +112,81 @@ body {
     color: var(--text-primary);
 }
 
-.auth-modal-btns {
+/* --- List Tabs & Category Pills --- */
+#category-pills, #list-tabs {
     display: flex;
+    flex-wrap: wrap;
     gap: 0.5rem;
+    margin-bottom: 1rem;
 }
 
-/* Structural Layouts */
-#sidebar {
-    width: 280px;
-    background: var(--bg-surface);
-    border-right: 1px solid var(--border-color);
-    padding: 1.5rem;
+.category-pill, .list-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: var(--accent-color);
+    color: #ffffff;
+    padding: 0.4rem 0.8rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.875rem;
+    border: none;
+    cursor: pointer;
+}
+
+.category-pill:hover, .list-tab:hover {
+    background: var(--accent-hover);
+}
+
+.list-tab-delete {
+    background: transparent;
+    border: none;
+    color: #ffffff;
+    font-size: 0.8rem;
+    cursor: pointer;
+    padding: 0 0.2rem;
+    margin-left: 0.2rem;
+    opacity: 0.8;
+}
+
+.list-tab-delete:hover {
+    opacity: 1;
+    color: #fca5a5;
+}
+
+/* --- Task Lists & Task Items --- */
+.task-list {
     display: flex;
     flex-direction: column;
-    gap: 1.5rem;
-    flex-shrink: 0;
+    gap: 0.75rem;
+    margin-top: 1rem;
 }
 
-#main-content {
-    flex: 1;
-    padding: 2rem;
-    overflow-y: auto;
-    max-width: 900px;
-}
-
-/* Component Containers */
 .subtask-container {
-    position: relative;
-    margin-bottom: 0.5rem;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 0.75rem 1rem;
+    box-shadow: var(--shadow-sm);
 }
 
 .task-item {
-    position: relative;
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: 0.75rem;
-    background: var(--bg-surface);
-    padding: 0.75rem 1rem;
-    border-radius: var(--radius-md);
-    border: 1px solid var(--border-color);
+    width: 100%;
 }
 
-.task-item.overdue {
-    border-color: var(--danger-color);
+.task-checkbox {
+    width: 1.1rem;
+    height: 1.1rem;
+    cursor: pointer;
 }
 
 .task-text {
     flex: 1;
+    font-size: 1rem;
+    word-break: break-word;
 }
 
 .task-text.done {
@@ -147,7 +194,75 @@ body {
     color: var(--text-muted);
 }
 
-/* Popover & Floating Widgets */
+/* Button Group Wrapper (Fixes vertical stacking) */
+.task-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    flex-shrink: 0;
+}
+
+/* Buttons */
+button {
+    cursor: pointer;
+    border: none;
+    background: var(--accent-color);
+    color: #ffffff;
+    padding: 0.4rem 0.75rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: background 0.15s ease-in-out;
+}
+
+button:hover {
+    background: var(--accent-hover);
+}
+
+.btn-delete {
+    background: var(--danger-color);
+}
+
+.btn-delete:hover {
+    background: var(--danger-hover);
+}
+
+.due-date-btn {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+}
+
+/* --- Subtasks Formatting --- */
+.subtask-list {
+    margin-top: 0.5rem;
+    padding-left: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.subtask-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+}
+
+.btn-add-subtask {
+    margin-top: 0.5rem;
+    background: transparent;
+    color: var(--accent-color);
+    border: 1px dashed var(--accent-color);
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8rem;
+}
+
+.btn-add-subtask:hover {
+    background: var(--bg-secondary);
+}
+
+/* --- Popover Picker Fixes --- */
 .due-picker-popover {
     position: absolute;
     right: 0;
@@ -161,54 +276,4 @@ body {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
-}
-
-/* Input validation styles */
-.input-invalid {
-    border-color: var(--danger-color) !important;
-}
-
-.input-warning {
-    color: var(--danger-color);
-    font-size: 0.85rem;
-    margin-top: 0.25rem;
-}
-
-@keyframes shake {
-    0%, 100% { transform: translateX(0); }
-    20%, 60% { transform: translateX(-5px); }
-    40%, 80% { transform: translateX(5px); }
-}
-
-.input-shake {
-    animation: shake 0.3s ease-in-out;
-}
-
-/* Buttons */
-button {
-    cursor: pointer;
-    border: none;
-    background: var(--accent-color);
-    color: white;
-    padding: 0.5rem 1rem;
-    border-radius: var(--radius-sm);
-    font-weight: 500;
-    transition: background 0.2s;
-}
-
-button:hover {
-    background: var(--accent-hover);
-}
-
-button.btn-secondary {
-    background: var(--bg-secondary);
-    color: var(--text-primary);
-}
-
-button.btn-delete {
-    background: var(--danger-color);
-}
-
-button.btn-delete:hover {
-    background: var(--danger-hover);
 }
