@@ -2,7 +2,7 @@
   "name": "KRHDev's To Do List",
   "short_name": "To Do List",
   "description": "A personal to-do list app built with HTML, CSS and JavaScript.",
-  "start_url": "/index.htm",
+  "start_url": "https://krhdev.github.io/interactive_todo_list/index.htm",
   "display": "standalone",
   "orientation": "portrait-primary",
   "background_color": "#510061",
