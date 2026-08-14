@@ -275,69 +275,60 @@ body, html {
 #auth-submit-btn:hover { background: var(--brand-dark); }
 
 /* =========================================================
-   AUTH OVERLAY & CARD STYLING
+   AUTH CARD - SPACING & FLEX FIX
    ========================================================= */
 
-/* Dimmed backdrop with glassmorphic blur */
-.auth-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background-color: rgba(15, 23, 42, 0.65); /* Modern deep slate backdrop */
-  backdrop-filter: blur(8px);
-  z-index: 99999;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 1.5rem;
-}
-
-/* Auth Card Container */
 #auth-card {
   background: #ffffff;
   width: 100%;
-  max-width: 380px;
+  max-width: 400px;
   padding: 2.5rem 2rem;
   border-radius: 16px;
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
   text-align: center;
-  transition: all 0.2s ease-in-out;
+  box-sizing: border-box;
 }
 
-/* Logo Image Header */
+/* Force vertical spacing on the inner form wrapper */
+#auth-main-form,
+#auth-reset-request,
+#auth-new-password {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.85rem; /* Creates automatic, uniform spacing between every item */
+}
+
+/* Logo image spacing */
 #auth-card img {
-  width: 56px;
-  height: 56px;
-  margin-bottom: 1rem;
+  width: 60px;
+  height: 60px;
+  margin-bottom: 0.5rem;
   border-radius: 12px;
-  object-fit: contain;
 }
 
-/* Titles & Subtitles */
+/* Titles and subtitle resets */
 #auth-card h2 {
-  color: #510061; /* Matches your brand theme color */
+  color: #510061;
   font-size: 1.35rem;
   font-weight: 600;
-  margin: 0 0 0.4rem 0;
-  letter-spacing: -0.01em;
+  margin: 0;
+  line-height: 1.2;
 }
 
-#auth-card p, 
 #auth-subtitle {
   color: #64748b;
   font-size: 0.875rem;
-  margin-bottom: 1.5rem;
-  line-height: 1.4;
+  margin: 0 0 0.5rem 0 !important;
 }
 
-/* Input Fields Wrapper */
+/* Input containers fix */
 #auth-card .add-form {
-  margin-bottom: 0.85rem;
+  width: 100%;
+  margin: 0 !important;
+  display: block;
 }
 
-/* Inputs Styling */
 #auth-card input {
   width: 100%;
   padding: 0.75rem 1rem;
@@ -357,10 +348,12 @@ body, html {
   box-shadow: 0 0 0 3px rgba(81, 0, 97, 0.15);
 }
 
-/* Primary Action Buttons */
-#auth-card button {
+/* Submit Button Fix */
+#auth-submit-btn,
+#reset-email-btn,
+#update-password-btn {
   width: 100%;
-  padding: 0.75rem 1rem;
+  padding: 0.8rem 1rem;
   font-size: 0.95rem;
   font-weight: 600;
   color: #ffffff;
@@ -368,23 +361,19 @@ body, html {
   border: none;
   border-radius: 8px;
   cursor: pointer;
-  margin-top: 0.5rem;
+  margin-top: 0.25rem;
   transition: background-color 0.2s, transform 0.1s;
 }
 
-#auth-card button:hover {
+#auth-submit-btn:hover {
   background-color: #3b0047;
 }
 
-#auth-card button:active {
-  transform: scale(0.98);
-}
-
-/* Links (Forgot Password & Toggle) */
-#forgot-password-row, 
+/* Links & Text Rows */
+#forgot-password-row,
 #auth-toggle {
-  font-size: 0.85rem;
-  margin: 1rem 0 0 0;
+  font-size: 0.875rem;
+  margin: 0 !important;
   color: #64748b;
 }
 
@@ -392,50 +381,38 @@ body, html {
   color: #510061;
   font-weight: 500;
   text-decoration: none;
-  transition: color 0.15s;
 }
 
 #auth-card a:hover {
   text-decoration: underline;
-  color: #3b0047;
 }
 
-/* Divider Rule */
+/* Divider Line */
 #auth-card hr {
+  width: 100%;
   border: none;
-  border-top: 1px solid #f1f5f9;
-  margin: 1.5rem 0 1.25rem 0;
+  border-top: 1px solid #e2e8f0;
+  margin: 0.5rem 0;
 }
 
-/* Secondary Action Button (Offline Skip) */
+/* Skip / Offline Button */
 #auth-skip-btn {
+  width: 100%;
+  padding: 0.7rem 1rem;
   background-color: transparent !important;
   color: #64748b !important;
+  font-size: 0.875rem;
   font-weight: 500 !important;
   border: 1px solid #cbd5e1 !important;
-  margin-top: 0 !important;
+  border-radius: 8px;
+  cursor: pointer;
+  margin: 0 !important;
+  transition: background-color 0.2s;
 }
 
 #auth-skip-btn:hover {
   background-color: #f8fafc !important;
-  color: #334155 !important;
-  border-color: #94a3b8 !important;
-}
-
-/* Error & Success Messages */
-#auth-msg, 
-#reset-msg, 
-#new-password-msg {
-  font-size: 0.85rem;
-  margin-top: 0.75rem;
-  margin-bottom: 0;
-  color: #dc2626; /* Clean red */
-}
-
-#auth-msg.success, 
-#reset-msg.success, 
-#new-password-msg.success {
-  color: #16a34a; /* Clean green */
+  color: #1e293b !important;
 }
 
 /* ── List tabs ── */
