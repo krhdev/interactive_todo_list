@@ -1,16 +1,16 @@
 // ─────────────────────────────────────────────
-//  KRHDev Todo App – script.js
+//  KRHDev Todo App  –  script.js
 //  CRUD: Create · Read · Update · Delete
 //  Features: Named lists · Light/Dark mode · Mobile friendly
-//            Change log · Local storage · Supabase cloud sync
-//            Subtasks · Category filter · Focus task · Auto-reset
+//             Change log · Local storage · Supabase cloud sync
+//             Subtasks · Category filter · Focus task · Auto-reset
+//             Due dates · Upcoming panel · Password reset
 //  Validation: Empty input blocked · Warnings shown · Duplicate prevention
 // ─────────────────────────────────────────────
 
 // ── Auth state ───────────────────────────────
 let currentUser = null;
 let useCloud    = false;
-const PASSWORD_RESET_REDIRECT = 'https://krhdev.github.io/interactive_todo_list/index.htm';
 
 // ── Theme ────────────────────────────────────
 function applyTheme(theme) {
@@ -60,8 +60,7 @@ let nextListId = lists.length ? Math.max(...lists.map(l => l.id)) + 1 : 1;
 let nextTodoId = todos.length ? Math.max(...todos.map(t => t.id)) + 1 : 1;
 let activeListId = null;
 let activeView   = 'home';
-let focusTaskId      = localStorage.getItem('krhdev-focus-task') || null;
-let focusEnabled     = localStorage.getItem('krhdev-focus-enabled') !== 'false';
+let focusTaskId  = localStorage.getItem('krhdev-focus-task') || null;
 
 function save() {
     localStorage.setItem('krhdev-lists', JSON.stringify(lists));
@@ -133,7 +132,7 @@ async function loadFromCloud() {
         dueTime:  t.due_time || null
     }));
     const savedActive = localStorage.getItem('krhdev-active-list');
-    const stillExists = savedActive && lists.find(l => String(l.id) === String(savedActive));
+    const stillExists = savedActive && lists.find(l => l.id === savedActive);
     activeListId = stillExists ? savedActive : (lists.length ? lists[0].id : null);
     activeView   = lists.length ? 'all' : 'home';
     await checkAndReset();
@@ -182,21 +181,6 @@ function logChange(message) {
     if (log.length > MAX_LOG) log.pop();
     localStorage.setItem('krhdev-log', JSON.stringify(log));
     renderLog();
-}
-
-function renderLog() {
-    const logContainer = document.getElementById('recent-changes-container');
-    const emptyLog = document.getElementById('empty-log');
-    if (!logContainer) return;
-    const log = JSON.parse(localStorage.getItem('krhdev-log') || '[]');
-    logContainer.innerHTML = '';
-    if (emptyLog) emptyLog.style.display = log.length ? 'none' : 'block';
-    log.forEach(item => {
-        const li = document.createElement('li');
-        li.className = 'log-item';
-        li.textContent = `[${item.time}] ${item.message}`;
-        logContainer.appendChild(li);
-    });
 }
 
 // ── CREATE — List ─────────────────────────────
@@ -280,12 +264,8 @@ async function addSubtask(parentId, text) {
     if (!parent) return;
     if (useCloud) {
         const { data, error } = await window.supabase.from('todos').insert({
-            user_id:   currentUser.id,
-            list_id:   parent.listId,
-            parent_id: parentId,
-            text,
-            done:      false,
-            deleted:   false
+            user_id: currentUser.id, list_id: parent.listId, parent_id: parentId,
+            text, done: false, deleted: false
         }).select().single();
         if (error) { console.error(error); return; }
         todos.push({ id: data.id, listId: data.list_id, parentId: data.parent_id, text: data.text, done: false, deleted: false, editing: false });
@@ -303,11 +283,7 @@ async function toggleSubtask(id) {
     const subtask = todos.find(t => t.id === id);
     if (!subtask) return;
     subtask.done = !subtask.done;
-    if (useCloud) {
-        await window.supabase.from('todos').update({ done: subtask.done }).eq('id', id);
-    } else {
-        save();
-    }
+    if (useCloud) { await window.supabase.from('todos').update({ done: subtask.done }).eq('id', id); } else { save(); }
     render();
 }
 
@@ -315,9 +291,7 @@ async function toggleSubtask(id) {
 async function deleteSubtask(id) {
     const subtask = todos.find(t => t.id === id);
     if (!subtask) return;
-    if (useCloud) {
-        await window.supabase.from('todos').delete().eq('id', id);
-    }
+    if (useCloud) { await window.supabase.from('todos').delete().eq('id', id); }
     todos = todos.filter(t => t.id !== id);
     if (!useCloud) save();
     logChange(`Removed subtask: "${subtask.text}"`);
@@ -334,18 +308,13 @@ function render() {
     document.querySelectorAll('[data-view]').forEach(link => {
         link.classList.toggle('active', link.dataset.view === activeView);
     });
-
-    const focusHidden   = localStorage.getItem('krhdev-focus-hidden') === 'true';
-    const focusStatBtn  = document.getElementById('focus-toggle-stat-btn');
-    if (focusStatBtn) {
-        focusStatBtn.textContent = focusHidden ? 'Off' : 'On';
-        focusStatBtn.classList.toggle('off', focusHidden);
-    }
+    const focusHidden  = localStorage.getItem('krhdev-focus-hidden') === 'true';
+    const focusStatBtn = document.getElementById('focus-toggle-stat-btn');
+    if (focusStatBtn) { focusStatBtn.textContent = focusHidden ? 'Off' : 'On'; focusStatBtn.classList.toggle('off', focusHidden); }
     const focusShowBtn = document.getElementById('focus-show-btn');
     if (focusShowBtn) focusShowBtn.style.display = focusHidden ? 'inline-block' : 'none';
-
-    renderUpcomingPanel();
     renderFocusCard();
+    renderUpcomingPanel();
     renderListTabs();
     renderTaskWidgets();
     renderLog();
@@ -368,21 +337,13 @@ function renderListTabs() {
         const activeCat  = pillsEl.dataset.active || firstCat;
 
         categories.forEach(cat => {
-            const count = cat === 'All'
-                ? lists.length
-                : lists.filter(l => (l.category || 'General') === cat).length;
+            const count = cat === 'All' ? lists.length : lists.filter(l => (l.category || 'General') === cat).length;
             const pill = document.createElement('button');
             pill.className = 'category-pill' + (activeCat === cat ? ' active' : '');
             pill.innerHTML = `${cat} <span class="pill-count">${count}</span>`;
-
             pill.addEventListener('click', () => {
                 if (cat === 'All') {
-                    if (activeCat === 'All') {
-                        const firstReal = categories.find(c => c !== 'All');
-                        pillsEl.dataset.active = firstReal || 'All';
-                    } else {
-                        pillsEl.dataset.active = 'All';
-                    }
+                    pillsEl.dataset.active = activeCat === 'All' ? (categories.find(c => c !== 'All') || 'All') : 'All';
                 } else {
                     pillsEl.dataset.active = cat;
                 }
@@ -392,7 +353,6 @@ function renderListTabs() {
         });
 
         const visibleLists = activeCat === 'All' ? lists : lists.filter(l => (l.category || 'General') === activeCat);
-
         const activeListInView = visibleLists.find(l => l.id === activeListId);
         if (!activeListInView && visibleLists.length > 0) {
             activeListId = visibleLists[0].id;
@@ -449,10 +409,9 @@ function renderTaskWidgets() {
     if (!hasList) return;
     const activeList = lists.find(l => l.id === activeListId);
     if (label && activeList) label.textContent = `— ${activeList.name}`;
-    
     const listTodos = todos.filter(t => t.listId === activeListId && !t.parentId);
     const activeSorted = listTodos
-        .filter(t => !t.deleted && !t.parentId)
+        .filter(t => !t.deleted)
         .sort((a, b) => {
             if (a.done && !b.done) return 1;
             if (!a.done && b.done) return -1;
@@ -461,10 +420,9 @@ function renderTaskWidgets() {
             if (b.dueDate) return 1;
             return 0;
         });
-
     renderList('list-container',           'empty-active',    activeSorted, renderActiveItem);
-    renderList('completed-list-container', 'empty-completed', listTodos.filter(t => t.done && !t.deleted && !t.parentId),  renderCompletedItem);
-    renderList('deleted-list-container',   'empty-deleted',   listTodos.filter(t => t.deleted && !t.parentId),             renderDeletedItem);
+    renderList('completed-list-container', 'empty-completed', listTodos.filter(t => t.done && !t.deleted),  renderCompletedItem);
+    renderList('deleted-list-container',   'empty-deleted',   listTodos.filter(t => t.deleted),             renderDeletedItem);
     const clearBtn = document.getElementById('clear-deleted-btn');
     if (clearBtn) clearBtn.style.display = listTodos.some(t => t.deleted) ? 'inline-block' : 'none';
 }
@@ -489,25 +447,18 @@ function renderSubtasks(parentId, container) {
             const li = document.createElement('li');
             li.className = 'subtask-item' + (sub.done ? ' done' : '');
             const cb = document.createElement('input');
-            cb.type = 'checkbox';
-            cb.checked = sub.done;
+            cb.type = 'checkbox'; cb.checked = sub.done;
             cb.addEventListener('change', () => toggleSubtask(sub.id));
             const span = document.createElement('span');
-            span.className = 'subtask-text';
-            span.textContent = sub.text;
+            span.className = 'subtask-text'; span.textContent = sub.text;
             const delBtn = document.createElement('button');
-            delBtn.className = 'btn-subtask-delete';
-            delBtn.textContent = '✕';
-            delBtn.title = 'Remove subtask';
+            delBtn.className = 'btn-subtask-delete'; delBtn.textContent = '✕';
             delBtn.addEventListener('click', () => deleteSubtask(sub.id));
-            li.appendChild(cb);
-            li.appendChild(span);
-            li.appendChild(delBtn);
+            li.appendChild(cb); li.appendChild(span); li.appendChild(delBtn);
             ul.appendChild(li);
         });
         container.appendChild(ul);
     }
-
     const addBtn = document.createElement('button');
     addBtn.className = 'btn-add-subtask';
     addBtn.textContent = '+ Add subtask';
@@ -516,27 +467,21 @@ function renderSubtasks(parentId, container) {
         const row = document.createElement('div');
         row.className = 'subtask-input-row';
         const inp = document.createElement('input');
-        inp.className = 'subtask-input';
-        inp.placeholder = 'Subtask...';
-        inp.type = 'text';
+        inp.className = 'subtask-input'; inp.placeholder = 'Subtask...'; inp.type = 'text';
         const confirmBtn = document.createElement('button');
-        confirmBtn.className = 'btn-add-subtask';
-        confirmBtn.textContent = 'Add';
+        confirmBtn.className = 'btn-add-subtask'; confirmBtn.textContent = 'Add';
         confirmBtn.style.marginLeft = '6px';
-
         const doAdd = async () => {
             const val = inp.value.trim();
             if (val) await addSubtask(parentId, val);
             else { row.remove(); addBtn.style.display = ''; }
         };
-
         inp.addEventListener('keydown', e => {
             if (e.key === 'Enter') { e.preventDefault(); doAdd(); }
             if (e.key === 'Escape') { row.remove(); addBtn.style.display = ''; }
         });
         confirmBtn.addEventListener('click', doAdd);
-        row.appendChild(inp);
-        row.appendChild(confirmBtn);
+        row.appendChild(inp); row.appendChild(confirmBtn);
         container.appendChild(row);
         inp.focus();
     });
@@ -547,11 +492,8 @@ function renderSubtasks(parentId, container) {
 function renderActiveItem(todo) {
     const wrapper = document.createElement('div');
     wrapper.className = 'subtask-container';
-
     const li = document.createElement('li');
-    li.className = 'task-item';
-    li.dataset.id = todo.id;
-
+    li.className = 'task-item'; li.dataset.id = todo.id;
     if (todo.editing) {
         const editInput = document.createElement('input');
         editInput.type = 'text'; editInput.className = 'edit-input'; editInput.value = todo.text;
@@ -562,37 +504,32 @@ function renderActiveItem(todo) {
         cancelBtn.className = 'btn-cancel'; cancelBtn.textContent = 'Cancel';
         cancelBtn.addEventListener('click', () => cancelEdit(todo.id));
         editInput.addEventListener('keydown', e => {
-            if (e.key === 'Enter')  saveEdit(todo.id, editInput.value);
+            if (e.key === 'Enter') saveEdit(todo.id, editInput.value);
             if (e.key === 'Escape') cancelEdit(todo.id);
         });
         li.appendChild(editInput); li.appendChild(saveBtn); li.appendChild(cancelBtn);
         setTimeout(() => { editInput.focus(); editInput.select(); }, 0);
     } else {
         const checkbox = document.createElement('input');
-        checkbox.type = 'checkbox';
-        checkbox.checked = todo.done;
+        checkbox.type = 'checkbox'; checkbox.checked = todo.done;
         checkbox.addEventListener('change', () => toggleDone(todo.id));
         const span = document.createElement('span');
-        span.className = 'task-text' + (todo.done ? ' done' : ''); span.textContent = todo.text;
-
+        span.className = 'task-text' + (todo.done ? ' done' : '');
+        span.textContent = todo.text + ' ';
         const subtasks = todos.filter(t => t.parentId === todo.id && !t.deleted);
         if (subtasks.length > 0) {
             const done = subtasks.filter(t => t.done).length;
             const prog = document.createElement('span');
             prog.className = 'subtask-progress';
             prog.textContent = `${done}/${subtasks.length}`;
-            span.textContent = todo.text + ' ';
             span.appendChild(prog);
         }
-
         const editBtn = document.createElement('button');
         editBtn.className = 'btn-edit'; editBtn.textContent = 'Edit';
         editBtn.addEventListener('click', () => startEdit(todo.id));
         const moveBtn = document.createElement('button');
-        moveBtn.className = 'btn-move';
-        moveBtn.textContent = '→';
-        moveBtn.title = 'Move to another list';
-        moveBtn.addEventListener('click', (e) => {
+        moveBtn.className = 'btn-move'; moveBtn.textContent = '→'; moveBtn.title = 'Move to another list';
+        moveBtn.addEventListener('click', e => {
             e.stopPropagation();
             const existing = li.querySelector('.move-select');
             if (existing) { existing.remove(); return; }
@@ -607,16 +544,13 @@ function renderActiveItem(todo) {
                 sel.appendChild(opt);
             });
             sel.addEventListener('change', () => { if (sel.value) moveTask(todo.id, sel.value); });
-            li.appendChild(sel);
-            sel.focus();
+            li.appendChild(sel); sel.focus();
         });
         const deleteBtn = document.createElement('button');
         deleteBtn.className = 'btn-delete'; deleteBtn.textContent = 'Delete';
         deleteBtn.addEventListener('click', () => deleteTodo(todo.id));
-
         const dueDateWrapper = document.createElement('div');
-        dueDateWrapper.style.position = 'relative';
-        dueDateWrapper.style.flexShrink = '0';
+        dueDateWrapper.style.position = 'relative'; dueDateWrapper.style.flexShrink = '0';
         const dueBtn = document.createElement('button');
         dueBtn.className = 'due-date-btn';
         if (todo.dueDate) {
@@ -625,27 +559,22 @@ function renderActiveItem(todo) {
             else if (isDueSoon(todo)) dueBtn.classList.add('due-soon');
             else dueBtn.classList.add('has-date');
         } else {
-            dueBtn.textContent = '📅';
-            dueBtn.title = 'Set due date';
+            dueBtn.textContent = '📅'; dueBtn.title = 'Set due date';
         }
         dueBtn.addEventListener('click', e => { e.stopPropagation(); showDueDatePicker(todo, dueDateWrapper); });
         dueDateWrapper.appendChild(dueBtn);
-
         if (isOverdue(todo)) {
             const badge = document.createElement('span');
-            badge.className = 'overdue-badge';
-            badge.textContent = 'Overdue';
+            badge.className = 'overdue-badge'; badge.textContent = 'Overdue';
             span.appendChild(badge);
             li.classList.add('overdue');
         }
-
-        li.appendChild(checkbox); li.appendChild(span); li.appendChild(dueDateWrapper); li.appendChild(editBtn); li.appendChild(moveBtn); li.appendChild(deleteBtn);
-
+        li.appendChild(checkbox); li.appendChild(span); li.appendChild(dueDateWrapper);
+        li.appendChild(editBtn); li.appendChild(moveBtn); li.appendChild(deleteBtn);
         li.setAttribute('draggable', 'true');
         li.addEventListener('dragstart', e => { e.dataTransfer.setData('text/plain', todo.id); li.classList.add('dragging'); });
         li.addEventListener('dragend', () => li.classList.remove('dragging'));
     }
-
     wrapper.appendChild(li);
     renderSubtasks(todo.id, wrapper);
     return wrapper;
@@ -678,32 +607,30 @@ function renderDeletedItem(todo) {
 
 // ── UPDATE ────────────────────────────────────
 async function toggleDone(id) {
-    const todo = todos.find(t => String(t.id) === String(id));
+    const todo = todos.find(t => t.id === id);
     if (!todo) return;
     todo.done = !todo.done;
     if (useCloud) { await window.supabase.from('todos').update({ done: todo.done }).eq('id', id); } else { save(); }
     logChange(todo.done ? `Completed: "${todo.text}"` : `Reopened: "${todo.text}"`);
-
     const listTasks = todos.filter(t => t.listId === todo.listId && !t.deleted && !t.parentId);
     if (listTasks.length > 0 && listTasks.every(t => t.done)) {
         activeView = 'completed';
         logChange(`List complete! All tasks done.`);
     }
-
     render();
 }
 
-function startEdit(id) { todos.forEach(t => { t.editing = (String(t.id) === String(id)); }); render(); }
+function startEdit(id) { todos.forEach(t => { t.editing = (t.id === id); }); render(); }
 
 async function saveEdit(id, newText) {
     const text = newText.trim();
-    const todo = todos.find(t => String(t.id) === String(id));
+    const todo = todos.find(t => t.id === id);
     if (!todo) return;
     const li = document.querySelector(`.task-item[data-id="${id}"]`);
     const editInput = li ? li.querySelector('.edit-input') : null;
     if (!text) { if (editInput) { showWarning(editInput, 'Task cannot be empty.'); editInput.focus(); } return; }
     if (text.length > 200) { if (editInput) { showWarning(editInput, 'Task must be 200 characters or fewer.'); editInput.focus(); } return; }
-    const activeTasks = todos.filter(t => t.listId === todo.listId && !t.deleted && String(t.id) !== String(id) && !t.parentId);
+    const activeTasks = todos.filter(t => t.listId === todo.listId && !t.deleted && t.id !== id && !t.parentId);
     const duplicate = activeTasks.find(t => normalise(t.text) === normalise(text));
     if (duplicate) { if (editInput) { showWarning(editInput, 'Another task with that name already exists.'); editInput.focus(); } return; }
     const old = todo.text;
@@ -713,25 +640,11 @@ async function saveEdit(id, newText) {
     render();
 }
 
-function cancelEdit(id) { const todo = todos.find(t => String(t.id) === String(id)); if (todo) { todo.editing = false; render(); } }
+function cancelEdit(id) { const todo = todos.find(t => t.id === id); if (todo) { todo.editing = false; render(); } }
 
-// ── MOVE TASK ─────────────────────────────────
-async function moveTask(todoId, targetListId) {
-    const todo = todos.find(t => String(t.id) === String(todoId));
-    if (!todo) return;
-    todo.listId = targetListId;
-    if (useCloud) {
-        await window.supabase.from('todos').update({ list_id: targetListId }).eq('id', todo.id);
-    } else {
-        save();
-    }
-    logChange(`Moved: "${todo.text}"`);
-    render();
-}
-
-// ── DELETE / RESTORE ──────────────────────────
+// ── DELETE ────────────────────────────────────
 async function deleteTodo(id) {
-    const todo = todos.find(t => String(t.id) === String(id));
+    const todo = todos.find(t => t.id === id);
     if (!todo) return;
     todo.deleted = true; todo.done = false; todo.editing = false;
     if (useCloud) { await window.supabase.from('todos').update({ deleted: true, done: false }).eq('id', id); } else { save(); }
@@ -740,7 +653,7 @@ async function deleteTodo(id) {
 }
 
 async function restoreTodo(id) {
-    const todo = todos.find(t => String(t.id) === String(id));
+    const todo = todos.find(t => t.id === id);
     if (!todo) return;
     todo.deleted = false;
     if (useCloud) { await window.supabase.from('todos').update({ deleted: false }).eq('id', id); } else { save(); }
@@ -749,292 +662,589 @@ async function restoreTodo(id) {
 }
 
 async function clearDeleted() {
-    if (!confirm('Permanently remove all deleted tasks from this list?')) return;
-    const toRemove = todos.filter(t => t.listId === activeListId && t.deleted);
-    if (useCloud) {
-        for (const t of toRemove) await window.supabase.from('todos').delete().eq('id', t.id);
-    }
+    if (!activeListId) return;
+    const toDelete = todos.filter(t => t.listId === activeListId && t.deleted);
+    const count = toDelete.length;
+    if (useCloud) { for (const t of toDelete) { await window.supabase.from('todos').delete().eq('id', t.id); } }
     todos = todos.filter(t => !(t.listId === activeListId && t.deleted));
     if (!useCloud) save();
-    logChange('Cleared all deleted tasks');
+    logChange(`Permanently removed ${count} deleted task(s)`);
     render();
 }
 
-// ── DUE DATE PICKER & CALCULATIONS ───────────
+// ── Move task ────────────────────────────────
+async function moveTask(todoId, newListId) {
+    const todo = todos.find(t => t.id === todoId);
+    if (!todo) return;
+    const newList = lists.find(l => l.id === newListId);
+    if (!newList || todo.listId === newListId) return;
+    todo.listId = newListId;
+    if (useCloud) { await window.supabase.from('todos').update({ list_id: newListId }).eq('id', todoId); } else { save(); }
+    logChange(`Moved: "${todo.text}" → "${newList.name}"`);
+    render();
+}
+
+// ── Stats ─────────────────────────────────────
+function updateStats() {
+    const activeTodos    = todos.filter(t => !t.done && !t.deleted && !t.parentId);
+    const doneTodos      = todos.filter(t => t.done && !t.deleted && !t.parentId);
+    const completedLists = lists.filter(l => {
+        const listTasks = todos.filter(t => t.listId === l.id && !t.deleted && !t.parentId);
+        return listTasks.length > 0 && listTasks.every(t => t.done);
+    });
+    const overdueTodos = todos.filter(t => isOverdue(t) && !t.parentId);
+    if (document.getElementById('stat-lists'))     document.getElementById('stat-lists').textContent     = lists.length;
+    if (document.getElementById('stat-active'))    document.getElementById('stat-active').textContent    = activeTodos.length;
+    if (document.getElementById('stat-done'))      document.getElementById('stat-done').textContent      = doneTodos.length;
+    if (document.getElementById('stat-lists-done')) document.getElementById('stat-lists-done').textContent = completedLists.length;
+    if (document.getElementById('stat-overdue'))   document.getElementById('stat-overdue').textContent   = overdueTodos.length;
+}
+
+// ── Change log ────────────────────────────────
+function renderLog() {
+    const log       = JSON.parse(localStorage.getItem('krhdev-log') || '[]');
+    const container = document.getElementById('recent-changes-container');
+    const emptyLog  = document.getElementById('empty-log');
+    if (!container) return;
+    container.innerHTML = ''; container.className = 'log-list';
+    if (emptyLog) emptyLog.style.display = log.length ? 'none' : 'block';
+    log.forEach(entry => {
+        const li = document.createElement('li');
+        li.className = 'log-item';
+        li.innerHTML = `${escapeHtml(entry.message)}<time>${entry.time}</time>`;
+        container.appendChild(li);
+    });
+}
+
+// ── Due date helpers ─────────────────────────
 function isOverdue(todo) {
     if (!todo.dueDate || todo.done || todo.deleted) return false;
-    const now = new Date();
-    const due = new Date(`${todo.dueDate}T${todo.dueTime || '23:59:59'}`);
-    return due < now;
+    const today = new Date().toISOString().slice(0, 10);
+    return todo.dueDate < today;
 }
 
 function isDueSoon(todo) {
-    if (!todo.dueDate || todo.done || todo.deleted || isOverdue(todo)) return false;
-    const now = new Date();
-    const due = new Date(`${todo.dueDate}T${todo.dueTime || '23:59:59'}`);
-    const diffHours = (due - now) / (1000 * 60 * 60);
-    return diffHours <= 24 && diffHours >= 0;
+    if (!todo.dueDate || todo.done || todo.deleted) return false;
+    const today = new Date();
+    const due   = new Date(todo.dueDate);
+    const diff  = (due - today) / (1000 * 60 * 60 * 24);
+    return diff >= 0 && diff <= 2;
 }
 
 function formatDueDate(todo) {
-    if (!todo.dueDate) return '';
-    const date = new Date(todo.dueDate);
-    let str = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-    if (todo.dueTime) str += ` ${todo.dueTime}`;
-    return str;
+    if (!todo.dueDate) return null;
+    const [y, m, d] = todo.dueDate.split('-');
+    const label = `${d}/${m}/${y}`;
+    if (todo.dueTime) return `${label} ${todo.dueTime.slice(0,5)}`;
+    return label;
 }
 
-function showDueDatePicker(todo, container) {
-    const existing = container.querySelector('.due-picker-popover');
-    if (existing) { existing.remove(); return; }
+async function saveDueDate(todoId, dueDate, dueTime) {
+    const todo = todos.find(t => t.id === todoId);
+    if (!todo) return;
+    todo.dueDate = dueDate || null;
+    todo.dueTime = dueTime || null;
+    if (useCloud) {
+        await window.supabase.from('todos').update({ due_date: todo.dueDate, due_time: todo.dueTime || null }).eq('id', todoId);
+    } else { save(); }
+    render();
+}
 
-    const popover = document.createElement('div');
-    popover.className = 'due-picker-popover';
-    
+function showDueDatePicker(todo, anchorEl) {
+    document.querySelectorAll('.due-date-picker').forEach(p => p.remove());
+    const picker = document.createElement('div');
+    picker.className = 'due-date-picker';
     const dateInput = document.createElement('input');
-    dateInput.type = 'date';
-    dateInput.value = todo.dueDate || '';
-
+    dateInput.type = 'date'; dateInput.value = todo.dueDate || '';
+    const timeLabel = document.createElement('label');
+    timeLabel.style.cssText = 'font-size:0.78rem;color:var(--text-muted)';
+    timeLabel.textContent = 'Time (optional)';
     const timeInput = document.createElement('input');
-    timeInput.type = 'time';
-    timeInput.value = todo.dueTime || '';
-
-    const btnRow = document.createElement('div');
-    btnRow.style.display = 'flex';
-    btnRow.style.gap = '6px';
-    btnRow.style.marginTop = '6px';
-
+    timeInput.type = 'time'; timeInput.value = todo.dueTime ? todo.dueTime.slice(0,5) : '';
+    const actions = document.createElement('div');
+    actions.className = 'due-date-picker-actions';
     const saveBtn = document.createElement('button');
-    saveBtn.textContent = 'Save';
-    saveBtn.addEventListener('click', async () => {
-        todo.dueDate = dateInput.value || null;
-        todo.dueTime = timeInput.value || null;
-        if (useCloud) {
-            await window.supabase.from('todos').update({ due_date: todo.dueDate, due_time: todo.dueTime }).eq('id', todo.id);
-        } else {
-            save();
-        }
-        popover.remove();
-        render();
-    });
-
+    saveBtn.className = 'btn-due-save'; saveBtn.textContent = 'Save';
+    saveBtn.addEventListener('click', async () => { await saveDueDate(todo.id, dateInput.value, timeInput.value); picker.remove(); });
     const clearBtn = document.createElement('button');
-    clearBtn.textContent = 'Clear';
-    clearBtn.className = 'btn-secondary';
-    clearBtn.addEventListener('click', async () => {
-        todo.dueDate = null;
-        todo.dueTime = null;
-        if (useCloud) {
-            await window.supabase.from('todos').update({ due_date: null, due_time: null }).eq('id', todo.id);
-        } else {
-            save();
-        }
-        popover.remove();
-        render();
-    });
-
-    btnRow.appendChild(saveBtn);
-    btnRow.appendChild(clearBtn);
-    popover.appendChild(dateInput);
-    popover.appendChild(timeInput);
-    popover.appendChild(btnRow);
-    container.appendChild(popover);
-}
-
-// ── FOCUS TASK WIDGET ─────────────────────────
-function renderFocusCard() {
-    const focusWidget = document.getElementById('widget-focus');
-    if (!focusWidget) return;
-    const focusHidden = localStorage.getItem('krhdev-focus-hidden') === 'true';
-    if (focusHidden || !focusEnabled) { focusWidget.style.display = 'none'; return; }
-
-    const activeTasks = todos.filter(t => !t.done && !t.deleted && !t.parentId);
-    if (!activeTasks.length) { focusWidget.style.display = 'none'; return; }
-
-    let currentFocus = activeTasks.find(t => String(t.id) === String(focusTaskId));
-    if (!currentFocus) {
-        currentFocus = activeTasks[Math.floor(Math.random() * activeTasks.length)];
-        focusTaskId = currentFocus.id;
-        localStorage.setItem('krhdev-focus-task', focusTaskId);
-    }
-
-    const listName = lists.find(l => l.id === currentFocus.listId)?.name || 'General';
-    const focusListName = document.getElementById('focus-list-name');
-    const focusTaskText = document.getElementById('focus-task-text');
-
-    if (focusListName) focusListName.textContent = `LIST: ${listName.toUpperCase()}`;
-    if (focusTaskText) focusTaskText.textContent = currentFocus.text;
-
-    focusWidget.style.display = 'block';
-}
-
-function rerollFocusTask() {
-    const activeTasks = todos.filter(t => !t.done && !t.deleted && !t.parentId && String(t.id) !== String(focusTaskId));
-    if (activeTasks.length > 0) {
-        const next = activeTasks[Math.floor(Math.random() * activeTasks.length)];
-        focusTaskId = next.id;
-        localStorage.setItem('krhdev-focus-task', focusTaskId);
-        render();
-    }
-}
-
-// ── UPCOMING & OVERDUE PANEL ──────────────────
-function renderUpcomingPanel() {
-    const panel = document.getElementById('widget-upcoming');
-    const listEl = document.getElementById('upcoming-list');
-    if (!panel || !listEl) return;
-
-    const urgentTasks = todos.filter(t => !t.done && !t.deleted && !t.parentId && t.dueDate && (isOverdue(t) || isDueSoon(t)));
-    if (!urgentTasks.length) { panel.style.display = 'none'; return; }
-
-    listEl.innerHTML = '';
-    urgentTasks.forEach(t => {
-        const li = document.createElement('li');
-        li.className = 'upcoming-item' + (isOverdue(t) ? ' overdue' : '');
-        li.textContent = `${t.text} (${formatDueDate(t)})`;
-        li.addEventListener('click', () => { activeListId = t.listId; activeView = 'all'; render(); });
-        listEl.appendChild(li);
-    });
-
-    panel.style.display = 'block';
-}
-
-// ── SIDEBAR STATS ──────────────────────────────
-function updateStats() {
-    const activeCount = todos.filter(t => !t.done && !t.deleted && !t.parentId).length;
-    const doneCount   = todos.filter(t => t.done && !t.deleted && !t.parentId).length;
-    const overdueCount = todos.filter(t => isOverdue(t)).length;
-    
-    const listsCompleted = lists.filter(l => {
-        const lTasks = todos.filter(t => t.listId === l.id && !t.deleted && !t.parentId);
-        return lTasks.length > 0 && lTasks.every(t => t.done);
-    }).length;
-
-    const elLists = document.getElementById('stat-lists');
-    const elActive = document.getElementById('stat-active');
-    const elDone = document.getElementById('stat-done');
-    const elListsDone = document.getElementById('stat-lists-done');
-    const elOverdue = document.getElementById('stat-overdue');
-
-    if (elLists) elLists.textContent = lists.length;
-    if (elActive) elActive.textContent = activeCount;
-    if (elDone) elDone.textContent = doneCount;
-    if (elListsDone) elListsDone.textContent = listsCompleted;
-    if (elOverdue) elOverdue.textContent = overdueCount;
-}
-
-// ── AUTH & OVERLAY HANDLERS ────────────────────
-function initAuth() {
-    const overlay = document.getElementById('auth-overlay');
-    const skipBtn = document.getElementById('auth-skip-btn');
-    const submitBtn = document.getElementById('auth-submit-btn');
-
-    if (!overlay) return;
-
-    // 1. Listen for persistent Supabase authentication session
-    if (window.supabase) {
-        window.supabase.auth.onAuthStateChange(async (event, session) => {
-            if (session?.user) {
-                currentUser = session.user;
-                useCloud = true;
-                overlay.style.display = 'none'; // Auto-hide when valid session exists
-                await loadFromCloud();
-            } else if (event === 'SIGNED_OUT') {
-                currentUser = null;
-                useCloud = false;
-                overlay.style.display = 'flex';
-                render();
+    clearBtn.className = 'btn-due-clear'; clearBtn.textContent = 'Clear';
+    clearBtn.addEventListener('click', async () => { await saveDueDate(todo.id, null, null); picker.remove(); });
+    actions.appendChild(clearBtn); actions.appendChild(saveBtn);
+    picker.appendChild(dateInput); picker.appendChild(timeLabel); picker.appendChild(timeInput); picker.appendChild(actions);
+    anchorEl.style.position = 'relative';
+    anchorEl.appendChild(picker);
+    setTimeout(() => {
+        document.addEventListener('click', function closePicker(e) {
+            if (!picker.contains(e.target) && e.target !== anchorEl) {
+                picker.remove();
+                document.removeEventListener('click', closePicker);
             }
         });
-    }
+    }, 0);
+    dateInput.focus();
+}
 
-    // 2. Local-only mode skip button
-    if (skipBtn) {
-        skipBtn.addEventListener('click', () => {
-            useCloud = false;
-            overlay.style.display = 'none';
-            render();
+// ── Upcoming / Overdue panel ─────────────────
+function renderUpcomingPanel() {
+    const widget = document.getElementById('widget-upcoming');
+    const ul     = document.getElementById('upcoming-list');
+    if (!widget || !ul) return;
+    const today   = new Date().toISOString().slice(0, 10);
+    const in2days = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const dueTasks = todos
+        .filter(t => t.dueDate && !t.done && !t.deleted && !t.parentId)
+        .sort((a, b) => a.dueDate.localeCompare(b.dueDate));
+    if (dueTasks.length === 0) { widget.style.display = 'none'; return; }
+    widget.style.display = 'block';
+    ul.innerHTML = '';
+    dueTasks.forEach(todo => {
+        const list     = lists.find(l => l.id === todo.listId);
+        const overdue  = todo.dueDate < today;
+        const dueToday = todo.dueDate === today;
+        const dueSoon  = todo.dueDate <= in2days && !overdue && !dueToday;
+        const li = document.createElement('li');
+        li.className = 'upcoming-item' + (overdue ? ' overdue' : dueToday ? ' due-today' : dueSoon ? ' due-soon' : '');
+        const textSpan = document.createElement('span');
+        textSpan.className = 'upcoming-item-text'; textSpan.textContent = todo.text; textSpan.title = todo.text;
+        const listSpan = document.createElement('span');
+        listSpan.className = 'upcoming-item-list'; listSpan.textContent = list ? list.name : '';
+        const dateSpan = document.createElement('span');
+        dateSpan.className = 'upcoming-item-date';
+        dateSpan.textContent = overdue ? `Overdue · ${formatDueDate(todo)}` : dueToday ? `Today${todo.dueTime ? ' · ' + todo.dueTime.slice(0,5) : ''}` : formatDueDate(todo);
+        li.style.cursor = 'pointer';
+        li.addEventListener('click', () => { activeListId = todo.listId; activeView = 'all'; render(); });
+        li.appendChild(textSpan); li.appendChild(listSpan); li.appendChild(dateSpan);
+        ul.appendChild(li);
+    });
+}
+
+// ── Focus Task ───────────────────────────────
+function renderFocusCard() {
+    const widget = document.getElementById('widget-focus');
+    if (!widget) return;
+    if (localStorage.getItem('krhdev-focus-hidden') === 'true') {
+        widget.style.display = 'none';
+        const showBtn = document.getElementById('focus-show-btn');
+        if (showBtn) showBtn.style.display = 'inline-block';
+        return;
+    }
+    const pillsEl    = document.getElementById('category-pills');
+    const activeCat  = pillsEl?.dataset.active || 'All';
+    const catListIds = activeCat === 'All'
+        ? lists.map(l => l.id)
+        : lists.filter(l => (l.category || 'General') === activeCat).map(l => l.id);
+    const activeTasks = todos.filter(t => !t.done && !t.deleted && !t.parentId && catListIds.includes(t.listId));
+    if (activeTasks.length === 0) { widget.style.display = 'none'; return; }
+    widget.style.display = 'block';
+    let focusTask = activeTasks.find(t => String(t.id) === String(focusTaskId));
+    if (!focusTask) {
+        focusTask = activeTasks[Math.floor(Math.random() * activeTasks.length)];
+        focusTaskId = focusTask.id;
+        localStorage.setItem('krhdev-focus-task', focusTaskId);
+    }
+    const list = lists.find(l => l.id === focusTask.listId);
+    document.getElementById('focus-task-text').textContent = focusTask.text;
+    document.getElementById('focus-list-name').textContent = list ? list.name.toUpperCase() : '';
+    const showBtn = document.getElementById('focus-show-btn');
+    if (showBtn) showBtn.style.display = 'none';
+    const focusToggleBtn = document.getElementById('focus-toggle-btn');
+    if (focusToggleBtn) {
+        focusToggleBtn.onclick = () => {
+            localStorage.setItem('krhdev-focus-hidden', 'true');
+            widget.style.display = 'none';
+            const sb = document.getElementById('focus-show-btn');
+            if (sb) sb.style.display = 'inline-block';
+        };
+    }
+    const doneBtn = document.getElementById('focus-done-btn');
+    if (doneBtn) {
+        doneBtn.onclick = async () => {
+            await toggleDone(focusTask.id);
+            focusTaskId = null;
+            localStorage.removeItem('krhdev-focus-task');
+            renderFocusCard();
+        };
+    }
+    const rerollBtn = document.getElementById('focus-reroll-btn');
+    if (rerollBtn) {
+        rerollBtn.onclick = () => {
+            const others = activeTasks.filter(t => String(t.id) !== String(focusTaskId));
+            const next = others.length ? others[Math.floor(Math.random() * others.length)] : activeTasks[0];
+            focusTaskId = next.id;
+            localStorage.setItem('krhdev-focus-task', focusTaskId);
+            renderFocusCard();
+        };
+    }
+    const clearBtn = document.getElementById('focus-clear-btn');
+    if (clearBtn) {
+        clearBtn.onclick = () => {
+            focusTaskId = null;
+            localStorage.removeItem('krhdev-focus-task');
+            widget.style.display = 'none';
+        };
+    }
+}
+
+// ── Utility ───────────────────────────────────
+function escapeHtml(str) {
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Sidebar user strip ────────────────────────
+function renderSidebarUser() {
+    const existing = document.getElementById('sidebar-user-strip');
+    if (existing) existing.remove();
+    const sidebar = document.getElementById('sidebar');
+    if (!sidebar) return;
+    if (currentUser) {
+        const strip = document.createElement('div');
+        strip.id = 'sidebar-user-strip';
+        strip.className = 'sidebar-user';
+        strip.innerHTML = `<span title="${currentUser.email}">👤 ${currentUser.email}</span><button class="btn-signout" id="sign-out-btn">Sign out</button>`;
+        const header = sidebar.querySelector('.sidebar-header');
+        if (header) header.insertAdjacentElement('afterend', strip);
+        else sidebar.prepend(strip);
+        document.getElementById('sign-out-btn').addEventListener('click', signOut);
+    }
+}
+
+// ── Auth ──────────────────────────────────────
+const PASSWORD_RESET_REDIRECT = 'https://krhdev.github.io/interactive_todo_list/index.htm';
+
+async function signOut() {
+    await window.supabase.auth.signOut();
+    currentUser = null; useCloud = false;
+    lists = JSON.parse(localStorage.getItem('krhdev-lists') || '[]');
+    todos = JSON.parse(localStorage.getItem('krhdev-todos') || '[]');
+    renderSidebarUser();
+    showAuthOverlay();
+    render();
+}
+
+function showAuthOverlay() { const o = document.getElementById('auth-overlay'); if (o) o.style.display = 'flex'; }
+function hideAuthOverlay() { const o = document.getElementById('auth-overlay'); if (o) o.style.display = 'none'; }
+
+function showSignInForm() {
+    document.getElementById('auth-main-form')?.style && (document.getElementById('auth-main-form').style.display = 'block');
+    document.getElementById('auth-reset-request')?.style && (document.getElementById('auth-reset-request').style.display = 'none');
+    document.getElementById('auth-new-password')?.style && (document.getElementById('auth-new-password').style.display = 'none');
+}
+
+function showResetRequestForm() {
+    document.getElementById('auth-main-form')?.style && (document.getElementById('auth-main-form').style.display = 'none');
+    document.getElementById('auth-reset-request')?.style && (document.getElementById('auth-reset-request').style.display = 'block');
+    document.getElementById('auth-new-password')?.style && (document.getElementById('auth-new-password').style.display = 'none');
+    const resetEmail = document.getElementById('reset-email');
+    const authEmail  = document.getElementById('auth-email');
+    if (resetEmail && authEmail?.value) resetEmail.value = authEmail.value;
+    const resetMsg = document.getElementById('reset-msg');
+    if (resetMsg) { resetMsg.textContent = ''; resetMsg.className = ''; }
+}
+
+function showNewPasswordForm() {
+    document.getElementById('auth-main-form')?.style && (document.getElementById('auth-main-form').style.display = 'none');
+    document.getElementById('auth-reset-request')?.style && (document.getElementById('auth-reset-request').style.display = 'none');
+    document.getElementById('auth-new-password')?.style && (document.getElementById('auth-new-password').style.display = 'block');
+    setTimeout(() => document.getElementById('new-password')?.focus(), 100);
+}
+
+async function sendPasswordReset() {
+    const emailInput = document.getElementById('reset-email');
+    const button     = document.getElementById('reset-email-btn');
+    const message    = document.getElementById('reset-msg');
+    if (!emailInput || !button || !message) return;
+    const email = emailInput.value.trim();
+    if (!email) { message.textContent = 'Please enter your email address.'; emailInput.focus(); return; }
+    button.disabled = true; button.textContent = 'Sending…'; message.textContent = '';
+    const { error } = await window.supabase.auth.resetPasswordForEmail(email, { redirectTo: PASSWORD_RESET_REDIRECT });
+    button.disabled = false; button.textContent = 'Send Reset Email';
+    if (error) { message.textContent = error.message; message.className = ''; return; }
+    message.textContent = 'Password reset email sent. Please check your inbox.';
+    message.className = 'success';
+}
+
+async function updatePassword() {
+    const passwordInput = document.getElementById('new-password');
+    const confirmInput  = document.getElementById('confirm-password');
+    const button        = document.getElementById('update-password-btn');
+    const message       = document.getElementById('new-password-msg');
+    if (!passwordInput || !confirmInput || !button || !message) return;
+    const password = passwordInput.value;
+    const confirm  = confirmInput.value;
+    if (!password) { message.textContent = 'Please enter a new password.'; passwordInput.focus(); return; }
+    if (password.length < 6) { message.textContent = 'Password must be at least 6 characters.'; passwordInput.focus(); return; }
+    if (password !== confirm) { message.textContent = 'Passwords do not match.'; confirmInput.focus(); return; }
+    button.disabled = true; button.textContent = 'Updating…'; message.textContent = '';
+    const { error } = await window.supabase.auth.updateUser({ password });
+    button.disabled = false; button.textContent = 'Update Password';
+    if (error) { message.textContent = error.message; message.className = ''; return; }
+    message.textContent = 'Password updated! Signing you out…'; message.className = 'success';
+    passwordInput.value = ''; confirmInput.value = '';
+    setTimeout(async () => {
+        await window.supabase.auth.signOut();
+        showSignInForm();
+        const authMsg = document.getElementById('auth-msg');
+        if (authMsg) { authMsg.textContent = 'Password updated. Please sign in.'; authMsg.className = 'success'; }
+        showAuthOverlay();
+    }, 1500);
+}
+
+// ── DOMContentLoaded ──────────────────────────
+document.addEventListener('DOMContentLoaded', async function () {
+
+    // Mobile sidebar
+    const sidebar       = document.getElementById('sidebar');
+    const sidebarOpen   = document.getElementById('sidebar-open');
+    const sidebarToggle = document.getElementById('sidebar-toggle');
+    const overlay = document.createElement('div');
+    overlay.className = 'sidebar-overlay';
+    document.body.appendChild(overlay);
+    function openSidebar()  { sidebar.classList.add('open');    overlay.classList.add('visible'); }
+    function closeSidebar() { sidebar.classList.remove('open'); overlay.classList.remove('visible'); }
+    if (sidebarOpen)   sidebarOpen.addEventListener('click', openSidebar);
+    if (sidebarToggle) sidebarToggle.addEventListener('click', closeSidebar);
+    overlay.addEventListener('click', closeSidebar);
+    document.querySelectorAll('[data-view]').forEach(link => {
+        link.addEventListener('click', () => { if (window.innerWidth <= 640) closeSidebar(); });
+    });
+
+    loadTheme();
+    const radios = document.querySelectorAll('input[name="theme"]');
+    radios.forEach(r => { r.addEventListener('change', () => applyTheme(r.value)); });
+
+    // Auth elements
+    const authSubmitBtn      = document.getElementById('auth-submit-btn');
+    const authSwitch         = document.getElementById('auth-switch');
+    const authSkipBtn        = document.getElementById('auth-skip-btn');
+    const authEmail          = document.getElementById('auth-email');
+    const authPassword       = document.getElementById('auth-password');
+    const authMsg            = document.getElementById('auth-msg');
+    const authTitle          = document.getElementById('auth-title');
+    const authOverlay        = document.getElementById('auth-overlay');
+    const forgotPasswordLink = document.getElementById('forgot-password-link');
+    const resetEmailBtn      = document.getElementById('reset-email-btn');
+    const backToSignin       = document.getElementById('back-to-signin');
+    const updatePasswordBtn  = document.getElementById('update-password-btn');
+    const confirmPasswordEl  = document.getElementById('confirm-password');
+    let authMode = 'signin';
+
+    if (authSwitch) {
+        authSwitch.addEventListener('click', e => {
+            e.preventDefault();
+            authMode = authMode === 'signin' ? 'signup' : 'signin';
+            if (authTitle) authTitle.textContent = authMode === 'signin' ? 'Sign in to KRHDev To Do List' : 'Create an account';
+            authSwitch.textContent = authMode === 'signin' ? 'Sign Up' : 'Sign In';
+            if (authSwitch.previousSibling) authSwitch.previousSibling.textContent = authMode === 'signin' ? "Don't have an account? " : 'Already have an account? ';
+            if (authSubmitBtn) authSubmitBtn.textContent = authMode === 'signin' ? 'Sign In' : 'Create Account';
+            if (authMsg) { authMsg.textContent = ''; authMsg.className = ''; }
         });
     }
 
-    // 3. User login action
-    if (submitBtn) {
-        submitBtn.addEventListener('click', async () => {
-            const email = document.getElementById('auth-email')?.value.trim();
-            const password = document.getElementById('auth-password')?.value.trim();
-            const msg = document.getElementById('auth-msg');
+    if (forgotPasswordLink) forgotPasswordLink.addEventListener('click', e => { e.preventDefault(); showResetRequestForm(); });
+    if (backToSignin)       backToSignin.addEventListener('click',       e => { e.preventDefault(); showSignInForm(); });
+    if (resetEmailBtn)      resetEmailBtn.addEventListener('click', sendPasswordReset);
+    if (updatePasswordBtn)  updatePasswordBtn.addEventListener('click', updatePassword);
+    if (confirmPasswordEl)  confirmPasswordEl.addEventListener('keydown', e => { if (e.key === 'Enter') updatePassword(); });
 
-            if (!email || !password) {
-                if (msg) msg.textContent = 'Please enter both email and password.';
+    if (authSubmitBtn) {
+        authSubmitBtn.addEventListener('click', async () => {
+            const email    = authEmail?.value.trim();
+            const password = authPassword?.value;
+            if (!email || !password) { if (authMsg) authMsg.textContent = 'Please enter your email and password.'; return; }
+            authSubmitBtn.textContent = authMode === 'signin' ? 'Signing in…' : 'Creating account…';
+            authSubmitBtn.disabled = true;
+            let errMsg = null;
+            if (authMode === 'signin') {
+                const { error } = await window.supabase.auth.signInWithPassword({ email, password });
+                if (error) errMsg = error.message;
+            } else {
+                const { error } = await window.supabase.auth.signUp({ email, password });
+                if (error) errMsg = error.message;
+                else if (authMsg) { authMsg.textContent = 'Account created! Check your email to confirm, then sign in.'; authMsg.className = 'success'; }
+            }
+            authSubmitBtn.disabled = false;
+            authSubmitBtn.textContent = authMode === 'signin' ? 'Sign In' : 'Create Account';
+            if (errMsg && authMsg) { authMsg.textContent = errMsg; authMsg.className = ''; }
+        });
+    }
+
+    if (authPassword) authPassword.addEventListener('keydown', e => { if (e.key === 'Enter') authSubmitBtn?.click(); });
+    if (authSkipBtn)  authSkipBtn.addEventListener('click', () => { hideAuthOverlay(); useCloud = false; render(); });
+
+    // Show overlay immediately
+    if (authOverlay) showAuthOverlay();
+
+    // Supabase auth state
+    const _supabase = (typeof window.supabase !== 'undefined' && window.supabase.auth) ? window.supabase : null;
+    if (_supabase) {
+        _supabase.auth.onAuthStateChange(async (event, session) => {
+            if (event === 'PASSWORD_RECOVERY') {
+                showAuthOverlay();
+                showNewPasswordForm();
                 return;
             }
-
-            const { data, error } = await window.supabase.auth.signInWithPassword({ email, password });
-            if (error) {
-                if (msg) msg.textContent = error.message;
+            if (session?.user) {
+                currentUser = session.user; useCloud = true;
+                hideAuthOverlay(); renderSidebarUser();
+                await loadFromCloud();
+            } else {
+                currentUser = null; useCloud = false;
+                renderSidebarUser();
+                if (authOverlay) showAuthOverlay();
             }
-            // Handled dynamically by onAuthStateChange above!
+        });
+        const { data: { session } } = await _supabase.auth.getSession();
+        if (!session && authOverlay) showAuthOverlay();
+    } else {
+        if (authOverlay) showAuthOverlay();
+    }
+
+    // Focus show button
+    const focusShowBtn = document.getElementById('focus-show-btn');
+    if (focusShowBtn) {
+        focusShowBtn.addEventListener('click', () => {
+            localStorage.removeItem('krhdev-focus-hidden');
+            focusShowBtn.style.display = 'none';
+            renderFocusCard();
         });
     }
-}
 
-// ── APPLICATION INITIALISATION ─────────────────
-document.addEventListener('DOMContentLoaded', () => {
-    loadTheme();
-    initAuth();
-
-    // Event listeners for Create List & Add Task
-    document.getElementById('add-list-btn')?.addEventListener('click', addList);
-    document.getElementById('new-list')?.addEventListener('keydown', e => { if (e.key === 'Enter') addList(); });
-
-    document.getElementById('add-btn')?.addEventListener('click', addTodo);
-    document.getElementById('new-todo')?.addEventListener('keydown', e => { if (e.key === 'Enter') addTodo(); });
-
-    document.getElementById('clear-deleted-btn')?.addEventListener('click', clearDeleted);
-
-    // Sidebar navigation bindings
-    document.querySelectorAll('[data-view]').forEach(link => {
-        link.addEventListener('click', e => {
-            e.preventDefault();
-            activeView = link.dataset.view;
+    // Focus stat toggle
+    const focusStatBtn = document.getElementById('focus-toggle-stat-btn');
+    if (focusStatBtn) {
+        focusStatBtn.addEventListener('click', () => {
+            const isHidden = localStorage.getItem('krhdev-focus-hidden') === 'true';
+            if (isHidden) localStorage.removeItem('krhdev-focus-hidden');
+            else localStorage.setItem('krhdev-focus-hidden', 'true');
             render();
         });
+    }
+
+    // + New category
+    const newCatSelect     = document.getElementById('new-list-category');
+    const newCatInput      = document.getElementById('new-category-input');
+    const newCatRow        = document.getElementById('new-category-row');
+    const newCatConfirmBtn = document.getElementById('new-category-confirm-btn');
+
+    function loadCustomCategories() {
+        if (!newCatSelect) return;
+        const saved = JSON.parse(localStorage.getItem('krhdev-custom-categories') || '[]');
+        newCatSelect.selectedIndex = 0;
+        saved.forEach(val => {
+            const exists = Array.from(newCatSelect.options).find(o => o.value === val);
+            if (!exists) {
+                const opt = document.createElement('option');
+                opt.value = val; opt.textContent = val;
+                newCatSelect.insertBefore(opt, newCatSelect.lastElementChild);
+            }
+        });
+    }
+    loadCustomCategories();
+
+    function confirmNewCategory() {
+        const val = newCatInput?.value.trim();
+        if (!val) return;
+        const exists = Array.from(newCatSelect.options).find(o => o.value === val);
+        if (!exists) {
+            const opt = document.createElement('option');
+            opt.value = val; opt.textContent = val;
+            newCatSelect.insertBefore(opt, newCatSelect.lastElementChild);
+            const saved = JSON.parse(localStorage.getItem('krhdev-custom-categories') || '[]');
+            if (!saved.includes(val)) { saved.push(val); localStorage.setItem('krhdev-custom-categories', JSON.stringify(saved)); }
+        }
+        newCatSelect.value = val;
+        if (newCatRow) newCatRow.style.display = 'none';
+        if (newCatInput) newCatInput.value = '';
+        document.getElementById('new-list')?.focus();
+    }
+
+    if (newCatSelect && newCatInput) {
+        newCatSelect.addEventListener('change', () => {
+            if (newCatSelect.value === '__new__') { if (newCatRow) newCatRow.style.display = 'flex'; newCatInput.focus(); }
+            else { if (newCatRow) newCatRow.style.display = 'none'; newCatInput.value = ''; }
+        });
+        newCatInput.addEventListener('keydown', e => {
+            if (e.key === 'Enter') { e.preventDefault(); confirmNewCategory(); }
+            if (e.key === 'Escape') { newCatSelect.value = 'General'; if (newCatRow) newCatRow.style.display = 'none'; newCatInput.value = ''; }
+        });
+    }
+    if (newCatConfirmBtn) newCatConfirmBtn.addEventListener('click', confirmNewCategory);
+
+    // Settings
+    const clearDataBtn = document.getElementById('clear-data-btn');
+    if (clearDataBtn) {
+        clearDataBtn.addEventListener('click', () => {
+            if (confirm('This will permanently delete all your lists, tasks, and history. Are you sure?')) {
+                ['krhdev-lists', 'krhdev-todos', 'krhdev-log'].forEach(k => localStorage.removeItem(k));
+                lists = []; todos = []; nextListId = 1; nextTodoId = 1; activeListId = null;
+                alert('All data cleared.'); render();
+            }
+        });
+    }
+
+    // Nav links
+    document.querySelectorAll('[data-view]').forEach(link => {
+        link.addEventListener('click', e => { e.preventDefault(); activeView = link.dataset.view; render(); });
     });
 
-    // Sidebar Toggle (Mobile view)
-    const sidebar = document.getElementById('sidebar');
-    document.getElementById('sidebar-open')?.addEventListener('click', () => sidebar?.classList.add('open'));
-    document.getElementById('sidebar-toggle')?.addEventListener('click', () => sidebar?.classList.remove('open'));
+    // Main inputs
+    const addListBtn      = document.getElementById('add-list-btn');
+    const newListInput    = document.getElementById('new-list');
+    const addBtn          = document.getElementById('add-btn');
+    const newTodoInput    = document.getElementById('new-todo');
+    const clearDeletedBtn = document.getElementById('clear-deleted-btn');
+    if (addListBtn)      addListBtn.addEventListener('click', addList);
+    if (newListInput)    newListInput.addEventListener('keydown', e => { if (e.key === 'Enter') addList(); });
+    if (addBtn)          addBtn.addEventListener('click', addTodo);
+    if (newTodoInput)    newTodoInput.addEventListener('keydown', e => { if (e.key === 'Enter') addTodo(); });
+    if (clearDeletedBtn) clearDeletedBtn.addEventListener('click', clearDeleted);
+    [newListInput, newTodoInput].forEach(input => { if (input) input.addEventListener('input', () => clearWarning(input)); });
 
-    // Category Selector Switch
-    document.getElementById('new-list-category')?.addEventListener('change', e => {
-        const catRow = document.getElementById('new-category-row');
-        if (catRow) catRow.style.display = (e.target.value === '__new__') ? 'flex' : 'none';
-    });
+    // Personalisation
+    const userNameInput = document.getElementById('user-name-input');
+    const saveNameBtn   = document.getElementById('save-name-btn');
+    const clearNameBtn  = document.getElementById('clear-name-btn');
+    const nameSavedMsg  = document.getElementById('name-saved-msg');
+    if (userNameInput) {
+        const current = localStorage.getItem(NAME_KEY);
+        if (current) userNameInput.value = current;
+        const showSaved = () => { if (!nameSavedMsg) return; nameSavedMsg.style.display = 'block'; setTimeout(() => { nameSavedMsg.style.display = 'none'; }, 2500); };
+        const saveName = () => {
+            const raw = userNameInput.value.trim();
+            const name = raw.replace(/[<>"]/g, '');
+            if (!name) { showWarning(userNameInput, 'Please enter a name, or use Reset to Default.'); return; }
+            clearWarning(userNameInput);
+            localStorage.setItem(NAME_KEY, name);
+            applyUserName();
+            showSaved();
+        };
+        saveNameBtn.addEventListener('click', saveName);
+        userNameInput.addEventListener('keydown', e => { if (e.key === 'Enter') saveName(); });
+        userNameInput.addEventListener('input', () => clearWarning(userNameInput));
+    }
+    if (clearNameBtn) {
+        clearNameBtn.addEventListener('click', () => {
+            localStorage.removeItem(NAME_KEY);
+            if (userNameInput) userNameInput.value = '';
+            applyUserName();
+            if (nameSavedMsg) {
+                nameSavedMsg.textContent = '✓ Reset to default.';
+                nameSavedMsg.style.display = 'block';
+                setTimeout(() => { nameSavedMsg.style.display = 'none'; nameSavedMsg.textContent = '✓ Name saved!'; }, 2500);
+            }
+        });
+    }
 
-    // Focus Task Controls
-    document.getElementById('focus-reroll-btn')?.addEventListener('click', rerollFocusTask);
-    document.getElementById('focus-done-btn')?.addEventListener('click', () => {
-        if (focusTaskId) toggleDone(focusTaskId);
-    });
-    document.getElementById('focus-clear-btn')?.addEventListener('click', () => {
-        focusTaskId = null;
-        localStorage.removeItem('krhdev-focus-task');
-        render();
-    });
-    document.getElementById('focus-toggle-btn')?.addEventListener('click', () => {
-        localStorage.setItem('krhdev-focus-hidden', 'true');
-        render();
-    });
-    document.getElementById('focus-show-btn')?.addEventListener('click', () => {
-        localStorage.setItem('krhdev-focus-hidden', 'false');
-        render();
-    });
-    document.getElementById('focus-toggle-stat-btn')?.addEventListener('click', () => {
-        const isHidden = localStorage.getItem('krhdev-focus-hidden') === 'true';
-        localStorage.setItem('krhdev-focus-hidden', isHidden ? 'false' : 'true');
-        render();
-    });
+    if (!useCloud && lists.length > 0) {
+        const lastActive = localStorage.getItem('krhdev-active-list');
+        const found = lastActive && lists.find(l => l.id === parseInt(lastActive));
+        activeListId = found ? found.id : lists[0].id;
+    }
 
-    render();
+    if (!useCloud) { await checkAndReset(); render(); }
 });
+
+// Service worker
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js'); });
+}
