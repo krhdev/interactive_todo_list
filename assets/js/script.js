@@ -119,7 +119,8 @@ async function loadFromCloud() {
     const { data: cloudLists, error: le } = await window.supabase.from('lists').select('*').order('created_at');
     const { data: cloudTodos, error: te } = await window.supabase.from('todos').select('*').order('created_at');
     if (le || te) { console.error('Cloud load error', le || te); return; }
-    lists = (cloudLists || []).map(l => ({ id: l.id, name: l.name, category: l.category || 'General' }));
+    lists = (cloudLists || []).map(l => ({ id: l.id, name: l.name, category: l.category || 'General', sortOrder: l.sort_order || 0 }))
+        .sort((a, b) => a.sortOrder - b.sortOrder);
     todos = (cloudTodos || []).map(t => ({
         id:       t.id,
         listId:   t.list_id,
@@ -197,9 +198,10 @@ async function addList() {
     const customCat = document.getElementById('new-category-input')?.value.trim();
     const category  = (rawCat === '__new__') ? (customCat || 'General') : rawCat;
     if (useCloud) {
-        const { data, error } = await window.supabase.from('lists').insert({ user_id: currentUser.id, name, category }).select().single();
+        const maxOrder = lists.length ? Math.max(...lists.map(l => l.sortOrder || 0)) : 0;
+        const { data, error } = await window.supabase.from('lists').insert({ user_id: currentUser.id, name, category, sort_order: maxOrder + 1 }).select().single();
         if (error) { console.error(error); return; }
-        lists.push({ id: data.id, name: data.name, category: data.category });
+        lists.push({ id: data.id, name: data.name, category: data.category, sortOrder: data.sort_order || 0 });
         activeListId = data.id;
     } else {
         const list = { id: nextListId++, name, category };
@@ -321,6 +323,14 @@ function render() {
     updateStats();
 }
 
+async function saveListOrder() {
+    if (!useCloud) { save(); return; }
+    for (let i = 0; i < lists.length; i++) {
+        lists[i].sortOrder = i;
+        await window.supabase.from('lists').update({ sort_order: i }).eq('id', lists[i].id);
+    }
+}
+
 function renderListTabs() {
     const tabsEl         = document.getElementById('list-tabs');
     const selectorWidget = document.getElementById('widget-list-selector');
@@ -380,13 +390,43 @@ function renderListTabs() {
             delBtn.addEventListener('click', e => { e.stopPropagation(); deleteList(list.id); });
             btn.appendChild(delBtn);
             btn.addEventListener('click', () => { activeListId = list.id; activeView = 'all'; render(); });
-            btn.addEventListener('dragover', e => { e.preventDefault(); btn.classList.add('drag-over'); });
+
+            // Drag to reorder lists
+            btn.setAttribute('draggable', 'true');
+            btn.addEventListener('dragstart', e => {
+                e.dataTransfer.setData('list-id', list.id);
+                e.dataTransfer.setData('text/plain', ''); // prevent task drop conflict
+                btn.style.opacity = '0.5';
+            });
+            btn.addEventListener('dragend', () => btn.style.opacity = '');
+            btn.addEventListener('dragover', e => {
+                e.preventDefault();
+                // Only highlight if dragging a list (not a task)
+                if (e.dataTransfer.types.includes('list-id') || !e.dataTransfer.getData('text/plain')) {
+                    btn.classList.add('drag-over');
+                }
+            });
             btn.addEventListener('dragleave', () => btn.classList.remove('drag-over'));
             btn.addEventListener('drop', e => {
                 e.preventDefault();
                 btn.classList.remove('drag-over');
+                const draggedListId = e.dataTransfer.getData('list-id');
                 const todoId = e.dataTransfer.getData('text/plain');
-                if (todoId) moveTask(todoId, list.id);
+
+                if (draggedListId && draggedListId !== list.id) {
+                    // Reorder lists
+                    const fromIdx = lists.findIndex(l => l.id === draggedListId);
+                    const toIdx   = lists.findIndex(l => l.id === list.id);
+                    if (fromIdx !== -1 && toIdx !== -1) {
+                        const [moved] = lists.splice(fromIdx, 1);
+                        lists.splice(toIdx, 0, moved);
+                        saveListOrder();
+                        render();
+                    }
+                } else if (todoId) {
+                    // Move task to this list
+                    moveTask(todoId, list.id);
+                }
             });
             tabsEl.appendChild(btn);
         });
