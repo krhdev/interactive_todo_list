@@ -136,6 +136,7 @@ async function loadFromCloud() {
     const stillExists = savedActive && lists.find(l => l.id === savedActive);
     activeListId = stillExists ? savedActive : (lists.length ? lists[0].id : null);
     activeView   = lists.length ? 'all' : 'home';
+    await loadCategoryOrderFromCloud();
     await checkAndReset();
     render();
 }
@@ -321,6 +322,41 @@ function render() {
     renderTaskWidgets();
     renderLog();
     updateStats();
+}
+
+// ── Category order ───────────────────────────
+function loadCategoryOrder() {
+    return JSON.parse(localStorage.getItem('krhdev-category-order') || '[]');
+}
+
+async function saveCategoryOrder(order) {
+    localStorage.setItem('krhdev-category-order', JSON.stringify(order));
+    if (!useCloud || !currentUser) return;
+    await window.supabase.from('category_order').upsert({
+        user_id:    currentUser.id,
+        order_data: order,
+        updated_at: new Date().toISOString()
+    }, { onConflict: 'user_id' });
+}
+
+async function loadCategoryOrderFromCloud() {
+    if (!useCloud || !currentUser) return;
+    const { data, error } = await window.supabase
+        .from('category_order')
+        .select('order_data')
+        .eq('user_id', currentUser.id)
+        .single();
+    if (error || !data) return;
+    localStorage.setItem('krhdev-category-order', JSON.stringify(data.order_data || []));
+}
+
+function getSortedCategories(categories) {
+    const saved = loadCategoryOrder();
+    if (!saved.length) return categories;
+    // Sort by saved order, append any new categories at the end
+    const ordered = saved.filter(c => categories.includes(c));
+    const unseen  = categories.filter(c => !saved.includes(c));
+    return [...ordered, ...unseen];
 }
 
 async function saveListOrder() {
