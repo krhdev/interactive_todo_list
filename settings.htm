@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 
@@ -9,16 +10,15 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="To Do List">
-    <link rel="manifest" href="/manifest.json">
-    <link rel="apple-touch-icon" href="/assets/images/todo-icon-192x192.png">
+    <link rel="manifest" href="./manifest.json">
+    <link rel="icon" href="./favicon.ico" type="image/x-icon">
+    <link rel="apple-touch-icon" sizes="192x192" href="./assets/images/todo-icon-192x192.png">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="./assets/css/style.css">
-    <link rel="shortcut icon" type="image/x-icon" href="favicon.ico">
-
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js');
+          navigator.serviceWorker.register('./sw.js');
         });
       }
     </script>
@@ -27,8 +27,12 @@
 <body>
 
     <div class="container">
-        <div class="sidebar">
-            <h2 id="sidebar-title">KRHDev's To Do List</h2>
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <img src="./assets/images/todo-icon-192x192.png" alt="KRHDev To Do List icon">
+                <h2 id="sidebar-title">KRHDev's To Do List</h2>
+                <button class="hamburger" id="sidebar-toggle" aria-label="Close menu">✕</button>
+            </div>
             <ul>
                 <li><a href="index.htm">Home</a></li>
                 <li><a href="index.htm">View Lists</a></li>
@@ -41,6 +45,13 @@
         </div>
 
         <div class="main-content">
+
+            <!-- Mobile topbar -->
+            <div class="mobile-topbar">
+                <button class="hamburger" id="sidebar-open" aria-label="Open menu">☰</button>
+                <span class="mobile-title" id="mobile-title">Settings</span>
+            </div>
+
             <h1 id="page-title">Settings</h1>
 
             <!-- PERSONALISATION -->
@@ -82,5 +93,18 @@
 
     <script src="./assets/js/script.js"></script>
     <script src="./assets/js/pwa-install.js"></script>
+
+    <script>
+        // Mobile sidebar for settings page
+        const sidebar  = document.getElementById('sidebar');
+        const overlay  = document.createElement('div');
+        overlay.className = 'sidebar-overlay';
+        document.body.appendChild(overlay);
+        function openSidebar()  { sidebar.classList.add('open');    overlay.classList.add('visible'); }
+        function closeSidebar() { sidebar.classList.remove('open'); overlay.classList.remove('visible'); }
+        document.getElementById('sidebar-open')?.addEventListener('click', openSidebar);
+        document.getElementById('sidebar-toggle')?.addEventListener('click', closeSidebar);
+        overlay.addEventListener('click', closeSidebar);
+    </script>
 </body>
 </html>
