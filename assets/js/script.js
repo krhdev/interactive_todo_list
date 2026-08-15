@@ -382,19 +382,55 @@ function renderListTabs() {
         const firstCat   = categories.find(c => c !== 'All') || 'All';
         const activeCat  = pillsEl.dataset.active || firstCat;
 
-        categories.forEach(cat => {
+        const realCats   = categories.filter(c => c !== 'All');
+        const sortedCats = ['All', ...getSortedCategories(realCats)];
+
+        sortedCats.forEach(cat => {
             const count = cat === 'All' ? lists.length : lists.filter(l => (l.category || 'General') === cat).length;
             const pill = document.createElement('button');
             pill.className = 'category-pill' + (activeCat === cat ? ' active' : '');
             pill.innerHTML = `${cat} <span class="pill-count">${count}</span>`;
+
             pill.addEventListener('click', () => {
                 if (cat === 'All') {
-                    pillsEl.dataset.active = activeCat === 'All' ? (categories.find(c => c !== 'All') || 'All') : 'All';
+                    pillsEl.dataset.active = activeCat === 'All' ? (sortedCats.find(c => c !== 'All') || 'All') : 'All';
                 } else {
                     pillsEl.dataset.active = cat;
                 }
                 renderListTabs();
             });
+
+            if (cat !== 'All') {
+                pill.setAttribute('draggable', 'true');
+                pill.addEventListener('dragstart', e => {
+                    e.dataTransfer.setData('category-drag', cat);
+                    setTimeout(() => pill.style.opacity = '0.5', 0);
+                });
+                pill.addEventListener('dragend', () => { pill.style.opacity = ''; pill.style.outline = ''; });
+                pill.addEventListener('dragover', e => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    pill.style.outline = '2px dashed #f0a500';
+                });
+                pill.addEventListener('dragleave', () => pill.style.outline = '');
+                pill.addEventListener('drop', e => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    pill.style.outline = '';
+                    const draggedCat = e.dataTransfer.getData('category-drag');
+                    if (!draggedCat || draggedCat === cat) return;
+                    const current = getSortedCategories(realCats);
+                    const fromIdx = current.indexOf(draggedCat);
+                    const toIdx   = current.indexOf(cat);
+                    if (fromIdx !== -1 && toIdx !== -1) {
+                        current.splice(fromIdx, 1);
+                        current.splice(toIdx, 0, draggedCat);
+                        saveCategoryOrder(current);
+                        renderListTabs();
+                    }
+                });
+            }
+
             pillsEl.appendChild(pill);
         });
 
