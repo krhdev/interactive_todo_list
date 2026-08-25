@@ -557,16 +557,37 @@ function renderSubtasks(parentId, container) {
         ul.className = 'subtask-list';
         subtasks.forEach(sub => {
             const li = document.createElement('li');
-            li.className = 'subtask-item' + (sub.done ? ' done' : '');
+            const overdueSubtask = isOverdue(sub);
+            li.className = 'subtask-item' + (sub.done ? ' done' : '') + (overdueSubtask ? ' overdue' : '');
             const cb = document.createElement('input');
             cb.type = 'checkbox'; cb.checked = sub.done;
             cb.addEventListener('change', () => toggleSubtask(sub.id));
             const span = document.createElement('span');
-            span.className = 'subtask-text'; span.textContent = sub.text;
+            span.className = 'subtask-text' + (sub.done ? ' done' : '');
+            span.textContent = sub.text;
+
+            // Due date button for subtask
+            const dueDateWrapper = document.createElement('div');
+            dueDateWrapper.style.position = 'relative'; dueDateWrapper.style.flexShrink = '0';
+            const dueBtn = document.createElement('button');
+            dueBtn.className = 'due-date-btn';
+            dueBtn.style.fontSize = '0.7rem';
+            dueBtn.style.padding = '2px 7px';
+            if (sub.dueDate) {
+                dueBtn.textContent = formatDueDate(sub);
+                if (overdueSubtask) dueBtn.classList.add('overdue');
+                else if (isDueSoon(sub)) dueBtn.classList.add('due-soon');
+                else dueBtn.classList.add('has-date');
+            } else {
+                dueBtn.textContent = '📅'; dueBtn.title = 'Set due date';
+            }
+            dueBtn.addEventListener('click', e => { e.stopPropagation(); showDueDatePicker(sub, dueDateWrapper); });
+            dueDateWrapper.appendChild(dueBtn);
+
             const delBtn = document.createElement('button');
             delBtn.className = 'btn-subtask-delete'; delBtn.textContent = '✕';
             delBtn.addEventListener('click', () => deleteSubtask(sub.id));
-            li.appendChild(cb); li.appendChild(span); li.appendChild(delBtn);
+            li.appendChild(cb); li.appendChild(span); li.appendChild(dueDateWrapper); li.appendChild(delBtn);
             ul.appendChild(li);
         });
         container.appendChild(ul);
@@ -904,13 +925,15 @@ function renderUpcomingPanel() {
     const today   = new Date().toISOString().slice(0, 10);
     const in2days = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
     const dueTasks = todos
-        .filter(t => t.dueDate && !t.done && !t.deleted && !t.parentId)
+        .filter(t => t.dueDate && !t.done && !t.deleted)
         .sort((a, b) => a.dueDate.localeCompare(b.dueDate));
     if (dueTasks.length === 0) { widget.style.display = 'none'; return; }
     widget.style.display = 'block';
     ul.innerHTML = '';
     dueTasks.forEach(todo => {
-        const list     = lists.find(l => l.id === todo.listId);
+        const isSubtask = !!todo.parentId;
+        const parent    = isSubtask ? todos.find(t => t.id === todo.parentId) : null;
+        const list      = lists.find(l => l.id === todo.listId);
         const overdue  = todo.dueDate < today;
         const dueToday = todo.dueDate === today;
         const dueSoon  = todo.dueDate <= in2days && !overdue && !dueToday;
@@ -919,7 +942,10 @@ function renderUpcomingPanel() {
         const textSpan = document.createElement('span');
         textSpan.className = 'upcoming-item-text'; textSpan.textContent = todo.text; textSpan.title = todo.text;
         const listSpan = document.createElement('span');
-        listSpan.className = 'upcoming-item-list'; listSpan.textContent = list ? list.name : '';
+        listSpan.className = 'upcoming-item-list';
+        listSpan.textContent = isSubtask
+            ? `${list ? list.name : ''} › ${parent ? parent.text : 'subtask'}`
+            : (list ? list.name : '');
         const dateSpan = document.createElement('span');
         dateSpan.className = 'upcoming-item-date';
         dateSpan.textContent = overdue ? `Overdue · ${formatDueDate(todo)}` : dueToday ? `Today${todo.dueTime ? ' · ' + todo.dueTime.slice(0,5) : ''}` : formatDueDate(todo);
