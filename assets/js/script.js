@@ -904,11 +904,34 @@ function showDueDatePicker(todo, anchorEl) {
     clearBtn.addEventListener('click', async () => { await saveDueDate(todo.id, null, null); picker.remove(); });
     actions.appendChild(clearBtn); actions.appendChild(saveBtn);
     picker.appendChild(dateInput); picker.appendChild(timeLabel); picker.appendChild(timeInput); picker.appendChild(actions);
-    anchorEl.style.position = 'relative';
-    anchorEl.appendChild(picker);
+
+    // Append to body so it's not clipped by overflow
+    document.body.appendChild(picker);
+
+    // Position it near the anchor, keeping it inside the viewport
+    const rect = anchorEl.getBoundingClientRect();
+    const pickerW = 240;
+    const pickerH = 160;
+    let left = rect.left;
+    let top  = rect.bottom + 6;
+
+    // Flip left if overflowing right edge
+    if (left + pickerW > window.innerWidth - 8) {
+        left = window.innerWidth - pickerW - 8;
+    }
+    if (left < 8) left = 8;
+
+    // Flip above if overflowing bottom
+    if (top + pickerH > window.innerHeight - 8) {
+        top = rect.top - pickerH - 6;
+    }
+
+    picker.style.left = `${left}px`;
+    picker.style.top  = `${top}px`;
+
     setTimeout(() => {
         document.addEventListener('click', function closePicker(e) {
-            if (!picker.contains(e.target) && e.target !== anchorEl) {
+            if (!picker.contains(e.target) && !anchorEl.contains(e.target)) {
                 picker.remove();
                 document.removeEventListener('click', closePicker);
             }

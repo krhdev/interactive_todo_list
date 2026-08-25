@@ -1342,8 +1342,8 @@ body, html {
 }
 
 .due-date-picker {
-    position: absolute;
-    z-index: 100;
+    position: fixed;
+    z-index: 9999;
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 8px;
@@ -1353,6 +1353,7 @@ body, html {
     flex-direction: column;
     gap: 8px;
     min-width: 220px;
+    max-width: calc(100vw - 32px);
 }
 
 .due-date-picker input[type="date"],
