@@ -947,8 +947,9 @@ function renderUpcomingPanel() {
     if (!widget || !ul) return;
     const today   = new Date().toISOString().slice(0, 10);
     const in2days = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const in14days = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
     const dueTasks = todos
-        .filter(t => t.dueDate && !t.done && !t.deleted)
+        .filter(t => t.dueDate && !t.done && !t.deleted && (t.dueDate <= in14days || t.dueDate < today))
         .sort((a, b) => a.dueDate.localeCompare(b.dueDate));
     if (dueTasks.length === 0) { widget.style.display = 'none'; return; }
     widget.style.display = 'block';
