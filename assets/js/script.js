@@ -810,6 +810,15 @@ function renderActiveItem(todo) {
         dueBtn.addEventListener('click', e => { e.stopPropagation(); showDueDatePicker(todo, dueDateWrapper); });
         dueDateWrapper.appendChild(dueBtn);
 
+        if (isOverdue(todo)) {
+            const badge = document.createElement('span');
+            badge.className = 'overdue-badge'; badge.textContent = 'Overdue';
+            span.appendChild(badge);
+            li.classList.add('overdue');
+        }
+
+        li.appendChild(checkbox); li.appendChild(span); li.appendChild(dueDateWrapper);
+
         // Calendar button — only show if task has a due date
         if (todo.dueDate) {
             const calWrapper = document.createElement('div');
@@ -823,13 +832,6 @@ function renderActiveItem(todo) {
             li.appendChild(calWrapper);
         }
 
-        if (isOverdue(todo)) {
-            const badge = document.createElement('span');
-            badge.className = 'overdue-badge'; badge.textContent = 'Overdue';
-            span.appendChild(badge);
-            li.classList.add('overdue');
-        }
-        li.appendChild(checkbox); li.appendChild(span); li.appendChild(dueDateWrapper);
         li.appendChild(editBtn); li.appendChild(moveBtn); li.appendChild(deleteBtn);
         li.setAttribute('draggable', 'true');
         li.addEventListener('dragstart', e => { e.dataTransfer.setData('text/plain', todo.id); li.classList.add('dragging'); });
