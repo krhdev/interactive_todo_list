@@ -537,6 +537,9 @@ function renderTaskWidgets() {
     renderList('deleted-list-container',   'empty-deleted',   listTodos.filter(t => t.deleted),             renderDeletedItem);
     const clearBtn = document.getElementById('clear-deleted-btn');
     if (clearBtn) clearBtn.style.display = listTodos.some(t => t.deleted) ? 'inline-block' : 'none';
+
+    const clearDoneBtn = document.getElementById('clear-done-btn');
+    if (clearDoneBtn) clearDoneBtn.style.display = listTodos.some(t => t.done && !t.deleted && !t.parentId) ? 'inline-block' : 'none';
 }
 
 function renderList(listId, emptyId, items, itemRenderer) {
@@ -791,6 +794,23 @@ async function restoreTodo(id) {
     todo.deleted = false;
     if (useCloud) { await window.supabase.from('todos').update({ deleted: false }).eq('id', id); } else { save(); }
     logChange(`Restored: "${todo.text}"`);
+    render();
+}
+
+async function clearDone() {
+    if (!activeListId) return;
+    const toDelete = todos.filter(t => t.listId === activeListId && t.done && !t.deleted && !t.parentId);
+    // Also get their subtasks
+    const parentIds = toDelete.map(t => t.id);
+    const subtasksToDelete = todos.filter(t => parentIds.includes(t.parentId));
+    const allToDelete = [...toDelete, ...subtasksToDelete];
+    const count = toDelete.length;
+    if (useCloud) {
+        for (const t of allToDelete) { await window.supabase.from('todos').delete().eq('id', t.id); }
+    }
+    todos = todos.filter(t => !allToDelete.find(d => d.id === t.id));
+    if (!useCloud) save();
+    logChange(`Cleared ${count} completed task(s)`);
     render();
 }
 
@@ -1360,6 +1380,8 @@ document.addEventListener('DOMContentLoaded', async function () {
     if (addBtn)          addBtn.addEventListener('click', addTodo);
     if (newTodoInput)    newTodoInput.addEventListener('keydown', e => { if (e.key === 'Enter') addTodo(); });
     if (clearDeletedBtn) clearDeletedBtn.addEventListener('click', clearDeleted);
+    const clearDoneBtn = document.getElementById('clear-done-btn');
+    if (clearDoneBtn) clearDoneBtn.addEventListener('click', clearDone);
     [newListInput, newTodoInput].forEach(input => { if (input) input.addEventListener('input', () => clearWarning(input)); });
 
     // Personalisation
