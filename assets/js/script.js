@@ -598,6 +598,9 @@ function renderSubtasks(parentId, container) {
     const addBtn = document.createElement('button');
     addBtn.className = 'btn-add-subtask';
     addBtn.textContent = '+ Add subtask';
+    // Hide add subtask button on completed tasks
+    const parentTodo = todos.find(t => t.id === parentId);
+    if (parentTodo && parentTodo.done) addBtn.style.display = 'none';
     addBtn.addEventListener('click', () => {
         addBtn.style.display = 'none';
         const row = document.createElement('div');
