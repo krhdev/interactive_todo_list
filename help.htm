@@ -9,15 +9,15 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="To Do List">
-    <link rel="manifest" href="/manifest.json">
+    <link rel="manifest" href="./manifest.json">
+    <link rel="icon" href="./favicon.ico" type="image/x-icon">
     <link rel="apple-touch-icon" sizes="192x192" href="./assets/images/todo-icon-192x192.png">
-    <link rel="apple-touch-icon" sizes="512x512" href="./assets/images/todo-icon-512x512.png">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="./assets/css/style.css">
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js');
+          navigator.serviceWorker.register('./sw.js');
         });
       }
     </script>
@@ -57,11 +57,11 @@
                 <details class="help-section" open>
                     <summary>Where is my data saved?</summary>
                     <div class="help-body">
-                        <p>If you are signed in, your lists and tasks are saved securely in the cloud and will sync across all your devices automatically.</p>
-                        <p>If you use the app without signing in, your data is saved <strong>on this device only</strong>, inside your browser. Nothing is sent to a server.</p>
+                        <p>If you are signed in, your lists and tasks are saved securely in the cloud and sync across all your devices automatically.</p>
+                        <p>If you use the app without signing in, your data is saved <strong>on this device only</strong> inside your browser.</p>
                         <ul>
-                            <li>Your data on your phone is separate from your data on your laptop unless you sign in.</li>
-                            <li>If you clear your browser's site data or cache, local data will be gone.</li>
+                            <li>Your data on your phone is separate from your laptop unless you sign in.</li>
+                            <li>If you clear your browser's site data, local data will be gone.</li>
                         </ul>
                         <div class="tip"><strong>Tip:</strong> Sign in to keep your lists safe and accessible everywhere. Export regularly as an extra backup.</div>
                     </div>
@@ -75,10 +75,10 @@
                         <ul>
                             <li><strong>Sign up:</strong> Enter your email and a password and click Create Account. Check your email for a confirmation link.</li>
                             <li><strong>Sign in:</strong> Enter your email and password and click Sign In.</li>
+                            <li><strong>Forgot password:</strong> Click the Forgot password link on the sign in card to receive a reset email.</li>
                             <li><strong>Continue without signing in:</strong> Uses local storage on this device only.</li>
                             <li><strong>Sign out:</strong> Click Sign out next to your email in the sidebar.</li>
                         </ul>
-                        <div class="tip"><strong>Tip:</strong> Once signed in, your lists load automatically on any device.</div>
                     </div>
                 </details>
 
@@ -88,26 +88,27 @@
                     <div class="help-body">
                         <p>Lists let you group tasks together. Each list belongs to a category which helps you organise and filter them.</p>
                         <ul>
-                            <li>Type a name in the <strong>New List</strong> box, choose a category from the dropdown, and press Create List or Enter.</li>
-                            <li>To add a new category, select <strong>＋ New category...</strong> from the dropdown, type a name and press Enter or click Add.</li>
+                            <li>Type a name in the <strong>New List</strong> box, choose a category, and press Create List or Enter.</li>
+                            <li>To add a new category, select <strong>＋ New category...</strong> from the dropdown, type a name and click Add.</li>
                             <li>Click any list tab to switch to it and see its tasks.</li>
                             <li>To remove a list, click the <strong>✕</strong> on its tab. This deletes the list and all its tasks permanently.</li>
                         </ul>
-                        <p>Available categories include General, Today, Daily, Weekly, Training, Research, and Personal Projects. Daily and Weekly lists reset automatically — see the section below.</p>
+                        <p>Built-in categories: General, Today, Daily, Weekly, Training, Research, and Personal Projects.</p>
                     </div>
                 </details>
 
                 <!-- 4 -->
                 <details class="help-section">
-                    <summary>Filtering lists by category</summary>
+                    <summary>Filtering and reordering lists and categories</summary>
                     <div class="help-body">
                         <p>Above your lists you'll see category pills — buttons that filter which lists are shown.</p>
                         <ul>
                             <li>Click a category pill to show only lists in that category.</li>
-                            <li>Click <strong>All</strong> to see every list at once.</li>
-                            <li>Click <strong>All</strong> again to toggle back to category view.</li>
+                            <li>Click <strong>All</strong> to see every list at once. Click it again to toggle back.</li>
+                            <li><strong>Reorder category pills:</strong> Drag a pill and drop it onto another to change the order. Order is saved and syncs across devices.</li>
+                            <li><strong>Reorder list tabs:</strong> Drag a list tab and drop it onto another to reorder. Order syncs to your account.</li>
                         </ul>
-                        <p>Each pill shows a count of how many lists are in that category. Each list tab shows a count of active tasks.</p>
+                        <p>Each pill shows how many lists are in that category. Each list tab shows a count of active tasks.</p>
                     </div>
                 </details>
 
@@ -117,9 +118,9 @@
                     <div class="help-body">
                         <p>Lists in the <strong>Daily</strong> category automatically un-tick all completed tasks every day at midnight. Lists in the <strong>Weekly</strong> category reset every Monday.</p>
                         <ul>
-                            <li>Use Daily for recurring habits or routines — take medication, morning checklist, etc.</li>
+                            <li>Use Daily for recurring habits — take medication, morning checklist etc.</li>
                             <li>Use Weekly for things you do once a week.</li>
-                            <li>Tasks are un-ticked, not deleted — they come back as active ready to do again.</li>
+                            <li>Tasks are un-ticked not deleted — they come back as active ready to do again.</li>
                         </ul>
                         <div class="tip"><strong>Tip:</strong> Resets are logged in Recent Changes so you can see when they happened.</div>
                     </div>
@@ -131,14 +132,16 @@
                     <div class="help-body">
                         <ul>
                             <li><strong>Add a task:</strong> Select a list, type in the Add a Task box, and press Add Task or Enter.</li>
-                            <li><strong>Complete a task:</strong> Tick the checkbox. It moves to Completed Tasks.</li>
-                            <li><strong>Reopen a task:</strong> In Completed Tasks, untick the checkbox to move it back to active.</li>
-                            <li><strong>Edit a task:</strong> Click Edit, make your change, then Save or press Enter. Press Cancel or Escape to discard.</li>
+                            <li><strong>Complete a task:</strong> Tick the checkbox. It gets a strikethrough and sinks to the bottom of the list.</li>
+                            <li><strong>Clear completed:</strong> Click <strong>✓ Clear completed</strong> at the bottom of Active Tasks to permanently remove all ticked tasks.</li>
+                            <li><strong>Reopen a task:</strong> Untick the checkbox to move it back to active.</li>
+                            <li><strong>Edit a task:</strong> Click Edit, make your change, then Save or press Enter.</li>
                             <li><strong>Delete a task:</strong> Click Delete. It moves to Deleted Tasks — not gone yet.</li>
                             <li><strong>Restore a task:</strong> In Deleted Tasks, click Restore to bring it back.</li>
-                            <li><strong>Permanently remove deleted tasks:</strong> Use the Clear Deleted button. This cannot be undone.</li>
-                            <li><strong>Move a task:</strong> Click the <strong>→</strong> button on a task and pick a list from the dropdown.</li>
+                            <li><strong>Permanently remove deleted tasks:</strong> Use the Clear Deleted button. Cannot be undone.</li>
+                            <li><strong>Move a task:</strong> Click the <strong>→</strong> button and pick a destination list. On desktop you can also drag a task onto a list tab.</li>
                         </ul>
+                        <p>When every task in a list is ticked, the app automatically switches to the Completed view.</p>
                     </div>
                 </details>
 
@@ -153,24 +156,44 @@
                             <li>Tick a subtask checkbox to mark it done.</li>
                             <li>Click <strong>✕</strong> on a subtask to remove it permanently.</li>
                             <li>An orange <strong>2/3</strong> badge on the parent task shows how many subtasks are done.</li>
+                            <li>Subtasks can also have their own due dates — click the 📅 button on any subtask.</li>
                         </ul>
                     </div>
                 </details>
 
                 <!-- 8 -->
                 <details class="help-section">
-                    <summary>Moving tasks between lists</summary>
+                    <summary>Due dates and upcoming tasks</summary>
                     <div class="help-body">
-                        <p>You can move any active task to a different list in two ways:</p>
+                        <p>Due dates are optional — set them on any task or subtask, or leave them off entirely.</p>
                         <ul>
-                            <li><strong>Move button:</strong> Click the <strong>→</strong> button on a task, then pick the destination list from the dropdown.</li>
-                            <li><strong>Drag and drop (desktop only):</strong> Drag a task and drop it onto a list tab. The tab highlights in orange when you hover over it.</li>
+                            <li>Click the <strong>📅</strong> button on any active task or subtask to set a due date.</li>
+                            <li>You can also set an optional time alongside the date.</li>
+                            <li>Click <strong>Save</strong> to confirm or <strong>Clear</strong> to remove the due date.</li>
+                            <li>Tasks with due dates sort to the top, earliest first.</li>
+                            <li>Tasks due within 2 days show the date button in <strong style="color:#f0a500">orange</strong>.</li>
+                            <li>Overdue tasks show in <strong style="color:#e53935">red</strong> with an Overdue badge.</li>
+                            <li>The sidebar shows a red overdue count across all lists.</li>
                         </ul>
-                        <div class="tip"><strong>Note:</strong> Drag and drop is not available on iOS — use the → button instead.</div>
+                        <p>A <strong>⚡ Upcoming &amp; Overdue</strong> panel appears when tasks have due dates set, showing overdue and next 14 days in urgency order. Click any item to jump to that list.</p>
                     </div>
                 </details>
 
                 <!-- 9 -->
+                <details class="help-section">
+                    <summary>Adding tasks to your calendar</summary>
+                    <div class="help-body">
+                        <p>Any task with a due date has a 🗓️ button. Click it to add the task to your calendar.</p>
+                        <ul>
+                            <li><strong>📅 Google Calendar</strong> — opens Google Calendar in a new tab pre-filled with the task name and date.</li>
+                            <li><strong>🍎 Apple / Outlook (.ics)</strong> — downloads an .ics file that opens in Apple Calendar, Outlook, or any other calendar app.</li>
+                        </ul>
+                        <p>If a time is set on the task, a 1-hour event is created. Without a time, it creates an all-day event.</p>
+                        <div class="tip"><strong>Tip:</strong> Set a due date on a task first — the 🗓️ button only appears once a date is set.</div>
+                    </div>
+                </details>
+
+                <!-- 10 -->
                 <details class="help-section">
                     <summary>Focus Task of the Day</summary>
                     <div class="help-body">
@@ -178,94 +201,69 @@
                         <ul>
                             <li><strong>✓ Done:</strong> Marks the task complete and picks a new one.</li>
                             <li><strong>↺ Re-roll:</strong> Picks a different task at random.</li>
-                            <li><strong>Clear focus:</strong> Dismisses the current focus without completing the task.</li>
-                            <li><strong>✕ (top right):</strong> Hides the focus card entirely. A <strong>⚡ Show Focus Task</strong> button appears in its place to bring it back.</li>
+                            <li><strong>Clear focus:</strong> Dismisses without completing the task.</li>
+                            <li><strong>✕ (top right):</strong> Hides the focus card. Use the <strong>Focus task On/Off</strong> toggle in the sidebar stats to bring it back.</li>
                         </ul>
                         <div class="tip"><strong>Tip:</strong> Switch category pill to get a focus task from a specific category only.</div>
                     </div>
                 </details>
 
-                <!-- 10 -->
-                <details class="help-section">
-                    <summary>Due dates and upcoming tasks</summary>
-                    <div class="help-body">
-                        <p>Due dates are optional — you can set them on any task, or leave them off entirely.</p>
-                        <ul>
-                            <li>Click the <strong>📅</strong> button on any active task to set a due date.</li>
-                            <li>You can also set an optional time alongside the date.</li>
-                            <li>Click <strong>Save</strong> to confirm or <strong>Clear</strong> to remove the due date.</li>
-                            <li>Tasks with due dates sort to the top of the list, with the earliest first.</li>
-                            <li>Tasks due within 2 days show the date button in <strong style="color:#f0a500">orange</strong>.</li>
-                            <li>Overdue tasks show the button in <strong style="color:#e53935">red</strong> with an Overdue badge, and float to the very top.</li>
-                            <li>The sidebar shows a red overdue count across all your lists.</li>
-                        </ul>
-                        <p>When you have tasks with due dates set, a <strong>⚡ Upcoming &amp; Overdue</strong> panel appears below the Focus Task card showing all your upcoming tasks in urgency order:</p>
-                        <ul>
-                            <li><strong style="color:#e53935">Overdue</strong> — red border, shown first</li>
-                            <li><strong style="color:#f0a500">Today</strong> — orange border</li>
-                            <li><strong>Due soon</strong> — purple border</li>
-                        </ul>
-                        <p>Click any item in the panel to jump straight to that list.</p>
-                        <div class="tip"><strong>Tip:</strong> Due dates are completely optional — lists like Daily or Shopping work fine without them. The upcoming panel only shows when tasks have dates set.</div>
-                    </div>
-                </details>
-
-                <!-- 15 -->
+                <!-- 11 -->
                 <details class="help-section">
                     <summary>How do I back up my lists? (Export)</summary>
                     <div class="help-body">
-                        <p>Exporting saves all your lists and tasks into a file you can keep as a backup or move to another device.</p>
+                        <p>Exporting saves all your lists and tasks into a file you can keep as a backup.</p>
                         <ul>
                             <li>In the sidebar, click <strong>⬇ Export Lists</strong>.</li>
-                            <li>A file named something like <code>krhdev-todo-backup-2026-06-22.json</code> will download automatically.</li>
+                            <li>A JSON file will download automatically.</li>
                             <li>Save it somewhere safe — Downloads, Google Drive, or email it to yourself.</li>
                         </ul>
                         <div class="tip"><strong>Tip:</strong> Export regularly, especially before clearing your browser or switching devices.</div>
                     </div>
                 </details>
 
-                <!-- 15 -->
+                <!-- 12 -->
                 <details class="help-section">
                     <summary>How do I restore or move my lists? (Import)</summary>
                     <div class="help-body">
                         <p>Importing reads a backup file and loads your lists back into the app.</p>
                         <ul>
                             <li>In the sidebar, click <strong>⬆ Import Lists</strong> and pick your backup file.</li>
-                            <li><strong>Merge</strong> — adds lists from the file alongside any existing lists.</li>
-                            <li><strong>Replace</strong> — wipes everything and restores exactly what's in the backup.</li>
+                            <li><strong>Merge</strong> — adds lists from the file alongside existing ones.</li>
+                            <li><strong>Replace</strong> — wipes everything and restores the backup.</li>
                         </ul>
                         <div class="tip"><strong>Tip:</strong> If unsure, choose Merge — it's the safer option.</div>
                     </div>
                 </details>
 
-                <!-- 16 -->
+                <!-- 13 -->
                 <details class="help-section">
-                    <summary>How do I use this on my phone or install it?</summary>
+                    <summary>How do I install this on my phone?</summary>
                     <div class="help-body">
                         <p>The app works in any mobile browser. For a better experience, add it to your home screen:</p>
                         <ul>
                             <li><strong>iPhone (Safari):</strong> Tap the Share button ⬆ then Add to Home Screen.</li>
-                            <li><strong>Android (Chrome):</strong> Tap the three-dot menu and choose Add to Home Screen, or look for an install icon in the address bar.</li>
-                            <li><strong>Desktop (Chrome or Edge):</strong> Look for an install icon at the right end of the address bar.</li>
+                            <li><strong>Android (Chrome):</strong> Tap the three-dot menu and choose Add to Home Screen.</li>
+                            <li><strong>Desktop (Chrome or Edge):</strong> Look for an install icon in the address bar.</li>
                         </ul>
-                        <p>Once installed, the app opens without the browser around it and works offline.</p>
+                        <p>Once installed, the app opens without the browser chrome and works offline.</p>
+                    </div>
+                </details>
+
+                <!-- 14 -->
+                <details class="help-section">
+                    <summary>Personalising the app</summary>
+                    <div class="help-body">
+                        <p>Go to <a href="settings.htm">Settings</a> to personalise:</p>
+                        <ul>
+                            <li><strong>Your name:</strong> Enter your name and the app title updates everywhere.</li>
+                            <li><strong>Reset to default:</strong> Click Reset to Default to go back to KRHDev.</li>
+                            <li><strong>Theme:</strong> Switch between light and dark mode. Saved automatically.</li>
+                        </ul>
                     </div>
                 </details>
 
                 <!-- 15 -->
-                <details class="help-section">
-                    <summary>Personalising the app</summary>
-                    <div class="help-body">
-                        <p>Go to <a href="settings.htm">Settings</a> to personalise the app:</p>
-                        <ul>
-                            <li><strong>Your name:</strong> Enter your name in the Personalisation section and the app title updates everywhere.</li>
-                            <li><strong>Reset to default:</strong> Click Reset to Default to go back to KRHDev.</li>
-                            <li><strong>Theme:</strong> Switch between light and dark mode. Your choice is saved automatically.</li>
-                        </ul>
-                    </div>
-                </details>
-
-                <!-- 16 -->
                 <details class="help-section">
                     <summary>How do I clear all my data?</summary>
                     <div class="help-body">
@@ -278,8 +276,20 @@
         </div>
     </div>
 
-    <script src="/assets/js/pwa-install.js"></script>
+    <script src="./assets/js/pwa-install.js"></script>
     <script src="./assets/js/script.js"></script>
     <script src="./assets/js/json-io.js"></script>
+
+    <script>
+        const sidebar  = document.getElementById('sidebar');
+        const overlay  = document.createElement('div');
+        overlay.className = 'sidebar-overlay';
+        document.body.appendChild(overlay);
+        function openSidebar()  { sidebar.classList.add('open');    overlay.classList.add('visible'); }
+        function closeSidebar() { sidebar.classList.remove('open'); overlay.classList.remove('visible'); }
+        document.getElementById('sidebar-open')?.addEventListener('click', openSidebar);
+        document.getElementById('sidebar-toggle')?.addEventListener('click', closeSidebar);
+        overlay.addEventListener('click', closeSidebar);
+    </script>
 </body>
 </html>
