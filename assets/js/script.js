@@ -627,6 +627,113 @@ function renderSubtasks(parentId, container) {
     container.appendChild(addBtn);
 }
 
+// ── Calendar helpers ─────────────────────────
+function generateGoogleCalendarUrl(todo) {
+    if (!todo.dueDate) return null;
+    const title = encodeURIComponent(todo.text);
+    const date  = todo.dueDate.replace(/-/g, '');
+    let dates;
+    if (todo.dueTime) {
+        // With time — 1 hour event
+        const [h, m]  = todo.dueTime.split(':');
+        const start   = `${date}T${h}${m}00`;
+        const endHour = String(parseInt(h) + 1).padStart(2, '0');
+        const end     = `${date}T${endHour}${m}00`;
+        dates = `${start}/${end}`;
+    } else {
+        // All day event
+        const nextDay = new Date(todo.dueDate);
+        nextDay.setDate(nextDay.getDate() + 1);
+        const endDate = nextDay.toISOString().slice(0,10).replace(/-/g,'');
+        dates = `${date}/${endDate}`;
+    }
+    const list = lists.find(l => l.id === todo.listId);
+    const details = encodeURIComponent(`Added from KRHDev To Do List${list ? ' — ' + list.name : ''}`);
+    return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${dates}&details=${details}`;
+}
+
+function generateIcsContent(todo) {
+    const title = todo.text.replace(/,/g, '\,').replace(/;/g, '\;');
+    const now   = new Date().toISOString().replace(/[-:]/g,'').slice(0,15) + 'Z';
+    const date  = todo.dueDate.replace(/-/g, '');
+    let dtStart, dtEnd;
+    if (todo.dueTime) {
+        const [h, m]  = todo.dueTime.split(':');
+        dtStart = `${date}T${h}${m}00`;
+        const endHour = String(parseInt(h) + 1).padStart(2, '0');
+        dtEnd = `${date}T${endHour}${m}00`;
+    } else {
+        const nextDay = new Date(todo.dueDate);
+        nextDay.setDate(nextDay.getDate() + 1);
+        dtStart = `;VALUE=DATE:${date}`;
+        dtEnd   = `;VALUE=DATE:${nextDay.toISOString().slice(0,10).replace(/-/g,'')}`;
+        return `BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VEVENT
+DTSTAMP:${now}
+DTSTART${dtStart}
+DTEND${dtEnd}
+SUMMARY:${title}
+END:VEVENT
+END:VCALENDAR`;
+    }
+    return `BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VEVENT
+DTSTAMP:${now}
+DTSTART:${dtStart}
+DTEND:${dtEnd}
+SUMMARY:${title}
+END:VEVENT
+END:VCALENDAR`;
+}
+
+function showCalendarMenu(todo, anchorEl) {
+    document.querySelectorAll('.calendar-menu').forEach(m => m.remove());
+    if (!todo.dueDate) {
+        alert('Please set a due date on this task first.');
+        return;
+    }
+    const menu = document.createElement('div');
+    menu.className = 'calendar-menu';
+
+    const googleUrl = generateGoogleCalendarUrl(todo);
+    const options = [
+        { label: '📅 Google Calendar', action: () => window.open(googleUrl, '_blank') },
+        { label: '🍎 Apple / Outlook (.ics)', action: () => {
+            const ics  = generateIcsContent(todo);
+            const blob = new Blob([ics], { type: 'text/calendar' });
+            const url  = URL.createObjectURL(blob);
+            const a    = document.createElement('a');
+            a.href = url; a.download = `${todo.text.slice(0,30)}.ics`;
+            a.click(); URL.revokeObjectURL(url);
+        }}
+    ];
+
+    options.forEach(opt => {
+        const btn = document.createElement('button');
+        btn.className = 'calendar-menu-item';
+        btn.textContent = opt.label;
+        btn.addEventListener('click', () => { opt.action(); menu.remove(); });
+        menu.appendChild(btn);
+    });
+
+    document.body.appendChild(menu);
+    const rect = anchorEl.getBoundingClientRect();
+    let left = rect.left;
+    let top  = rect.bottom + 4;
+    if (left + 200 > window.innerWidth - 8) left = window.innerWidth - 208;
+    if (top + 80 > window.innerHeight - 8) top = rect.top - 84;
+    menu.style.left = `${left}px`;
+    menu.style.top  = `${top}px`;
+
+    setTimeout(() => {
+        document.addEventListener('click', function closeMenu(e) {
+            if (!menu.contains(e.target)) { menu.remove(); document.removeEventListener('click', closeMenu); }
+        });
+    }, 0);
+}
+
 // ── Item renderers ────────────────────────────
 function renderActiveItem(todo) {
     const wrapper = document.createElement('div');
@@ -702,6 +809,20 @@ function renderActiveItem(todo) {
         }
         dueBtn.addEventListener('click', e => { e.stopPropagation(); showDueDatePicker(todo, dueDateWrapper); });
         dueDateWrapper.appendChild(dueBtn);
+
+        // Calendar button — only show if task has a due date
+        if (todo.dueDate) {
+            const calWrapper = document.createElement('div');
+            calWrapper.style.position = 'relative'; calWrapper.style.flexShrink = '0';
+            const calBtn = document.createElement('button');
+            calBtn.className = 'btn-cal';
+            calBtn.textContent = '🗓️';
+            calBtn.title = 'Add to calendar';
+            calBtn.addEventListener('click', e => { e.stopPropagation(); showCalendarMenu(todo, calWrapper); });
+            calWrapper.appendChild(calBtn);
+            li.appendChild(calWrapper);
+        }
+
         if (isOverdue(todo)) {
             const badge = document.createElement('span');
             badge.className = 'overdue-badge'; badge.textContent = 'Overdue';
