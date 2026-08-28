@@ -1529,3 +1529,52 @@ body, html {
 .calendar-menu-item:hover {
     background: var(--surface-2);
 }
+
+/* ── Mobile task item layout fix ── */
+@media (max-width: 640px) {
+    .task-item {
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+
+    .task-text {
+        flex: 1 1 100%;
+        order: 1;
+        padding-left: 26px; /* align with checkbox */
+    }
+
+    .task-item input[type="checkbox"] {
+        order: 0;
+        margin-top: 2px;
+        align-self: flex-start;
+        position: absolute;
+    }
+
+    .task-item {
+        position: relative;
+        padding-left: 0;
+    }
+
+    .due-date-btn,
+    .btn-cal,
+    .btn-edit,
+    .btn-move,
+    .btn-delete,
+    .btn-save,
+    .btn-cancel {
+        order: 2;
+        padding: 5px 10px;
+        font-size: 0.78rem;
+    }
+
+    .btn-cal {
+        font-size: 0.95rem;
+        padding: 3px 6px;
+    }
+
+    .move-select {
+        order: 2;
+        max-width: 120px;
+        font-size: 0.78rem;
+    }
+}
