@@ -1534,47 +1534,57 @@ body, html {
 @media (max-width: 640px) {
     .task-item {
         flex-wrap: wrap;
+        align-items: center;
         gap: 6px;
-    }
-
-    .task-text {
-        flex: 1 1 100%;
-        order: 1;
-        padding-left: 26px; /* align with checkbox */
+        padding: 8px 0;
     }
 
     .task-item input[type="checkbox"] {
+        flex-shrink: 0;
         order: 0;
-        margin-top: 2px;
-        align-self: flex-start;
-        position: absolute;
+        align-self: center;
     }
 
-    .task-item {
-        position: relative;
-        padding-left: 0;
+    .task-text {
+        flex: 1 1 calc(100% - 30px);
+        order: 1;
+        min-width: 0;
+        word-break: break-word;
     }
 
+    /* Buttons wrap to second row */
     .due-date-btn,
     .btn-cal,
     .btn-edit,
     .btn-move,
     .btn-delete,
     .btn-save,
-    .btn-cancel {
-        order: 2;
+    .btn-cancel,
+    .due-date-btn + div,
+    .subtask-progress {
+        order: 3;
+    }
+
+    .due-date-btn {
+        font-size: 0.75rem;
+        padding: 3px 8px;
+    }
+
+    .btn-cal {
+        font-size: 0.82rem;
+        padding: 2px 4px;
+        background: none;
+        border: none;
+    }
+
+    .btn-edit, .btn-move, .btn-delete, .btn-save, .btn-cancel {
         padding: 5px 10px;
         font-size: 0.78rem;
     }
 
-    .btn-cal {
-        font-size: 0.95rem;
-        padding: 3px 6px;
-    }
-
     .move-select {
-        order: 2;
-        max-width: 120px;
+        max-width: 110px;
         font-size: 0.78rem;
+        order: 3;
     }
 }
