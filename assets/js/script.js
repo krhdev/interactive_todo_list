@@ -762,6 +762,14 @@ function renderActiveItem(todo) {
         const span = document.createElement('span');
         span.className = 'task-text' + (todo.done ? ' done' : '');
         span.textContent = todo.text + ' ';
+
+        // Long press to edit (mobile)
+        let pressTimer = null;
+        span.addEventListener('touchstart', () => {
+            pressTimer = setTimeout(() => { startEdit(todo.id); }, 600);
+        }, { passive: true });
+        span.addEventListener('touchend', () => { clearTimeout(pressTimer); });
+        span.addEventListener('touchmove', () => { clearTimeout(pressTimer); });
         const subtasks = todos.filter(t => t.parentId === todo.id && !t.deleted);
         if (subtasks.length > 0) {
             const done = subtasks.filter(t => t.done).length;
