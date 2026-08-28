@@ -1532,94 +1532,59 @@ body, html {
 
 /* ── Mobile task item layout fix ── */
 @media (max-width: 640px) {
+
     .task-item {
-        display: grid;
-        grid-template-columns: 20px 1fr;
-        grid-template-rows: auto auto;
-        gap: 4px 8px;
-        align-items: center;
+        flex-wrap: nowrap;
+        align-items: flex-start;
+        gap: 8px;
         padding: 10px 0;
     }
 
     .task-item input[type="checkbox"] {
-        grid-column: 1;
-        grid-row: 1;
-        align-self: center;
-        justify-self: center;
+        flex-shrink: 0;
+        margin-top: 3px;
         width: 18px;
         height: 18px;
     }
 
-    .task-text {
-        grid-column: 2;
-        grid-row: 1;
+    /* Text + buttons wrapper */
+    .task-item .task-text {
+        flex: 1;
         min-width: 0;
         word-break: break-word;
-        font-size: 0.95rem;
+        white-space: normal;
     }
 
-    /* Buttons row */
-    .due-date-btn,
-    .btn-cal,
-    .btn-edit,
-    .btn-move,
-    .btn-delete,
-    .btn-save,
-    .btn-cancel,
-    .move-select {
-        grid-column: 2;
-        grid-row: 2;
+    /* Hide edit and move on mobile to save space — use swipe actions instead */
+    .task-item .btn-edit,
+    .task-item .btn-move {
+        display: none;
     }
 
-    /* Group all action buttons in a flex row */
-    .task-item {
-        position: relative;
-    }
-
-    .task-item > .due-date-btn,
-    .task-item > div,
-    .task-item > .btn-edit,
-    .task-item > .btn-move,
-    .task-item > .btn-delete,
-    .task-item > .btn-save,
-    .task-item > .btn-cancel {
-        display: inline-flex;
-        align-items: center;
-    }
-
-    .due-date-btn {
-        font-size: 0.72rem;
-        padding: 3px 8px;
-    }
-
-    .btn-cal {
-        font-size: 0.9rem;
-        padding: 2px 4px;
-        background: none;
-        border: none;
-        opacity: 0.8;
-    }
-
-    .btn-edit, .btn-move, .btn-delete, .btn-save, .btn-cancel {
+    /* Keep delete visible but smaller */
+    .task-item .btn-delete {
+        flex-shrink: 0;
         padding: 5px 10px;
         font-size: 0.78rem;
+        align-self: center;
     }
 
-    .move-select {
-        max-width: 110px;
-        font-size: 0.78rem;
+    /* Due date pill - smaller */
+    .due-date-btn {
+        font-size: 0.7rem;
+        padding: 2px 7px;
+        flex-shrink: 0;
+        align-self: center;
     }
 
-    /* Subtask container indented */
-    .subtask-list {
-        margin-left: 28px;
-    }
-
-    .add-subtask-form, .subtask-input-row {
-        margin-left: 28px;
-    }
-
-    .btn-add-subtask {
-        margin-left: 28px;
+    /* Calendar icon - small and clean */
+    .btn-cal {
+        font-size: 0.9rem;
+        padding: 2px 2px;
+        background: none;
+        border: none;
+        flex-shrink: 0;
+        align-self: center;
+        opacity: 0.7;
     }
 }
