@@ -1533,26 +1533,32 @@ body, html {
 /* ── Mobile task item layout fix ── */
 @media (max-width: 640px) {
     .task-item {
-        flex-wrap: wrap;
+        display: grid;
+        grid-template-columns: 20px 1fr;
+        grid-template-rows: auto auto;
+        gap: 4px 8px;
         align-items: center;
-        gap: 6px;
-        padding: 8px 0;
+        padding: 10px 0;
     }
 
     .task-item input[type="checkbox"] {
-        flex-shrink: 0;
-        order: 0;
+        grid-column: 1;
+        grid-row: 1;
         align-self: center;
+        justify-self: center;
+        width: 18px;
+        height: 18px;
     }
 
     .task-text {
-        flex: 1 1 calc(100% - 30px);
-        order: 1;
+        grid-column: 2;
+        grid-row: 1;
         min-width: 0;
         word-break: break-word;
+        font-size: 0.95rem;
     }
 
-    /* Buttons wrap to second row */
+    /* Buttons row */
     .due-date-btn,
     .btn-cal,
     .btn-edit,
@@ -1560,21 +1566,38 @@ body, html {
     .btn-delete,
     .btn-save,
     .btn-cancel,
-    .due-date-btn + div,
-    .subtask-progress {
-        order: 3;
+    .move-select {
+        grid-column: 2;
+        grid-row: 2;
+    }
+
+    /* Group all action buttons in a flex row */
+    .task-item {
+        position: relative;
+    }
+
+    .task-item > .due-date-btn,
+    .task-item > div,
+    .task-item > .btn-edit,
+    .task-item > .btn-move,
+    .task-item > .btn-delete,
+    .task-item > .btn-save,
+    .task-item > .btn-cancel {
+        display: inline-flex;
+        align-items: center;
     }
 
     .due-date-btn {
-        font-size: 0.75rem;
+        font-size: 0.72rem;
         padding: 3px 8px;
     }
 
     .btn-cal {
-        font-size: 0.82rem;
+        font-size: 0.9rem;
         padding: 2px 4px;
         background: none;
         border: none;
+        opacity: 0.8;
     }
 
     .btn-edit, .btn-move, .btn-delete, .btn-save, .btn-cancel {
@@ -1585,6 +1608,18 @@ body, html {
     .move-select {
         max-width: 110px;
         font-size: 0.78rem;
-        order: 3;
+    }
+
+    /* Subtask container indented */
+    .subtask-list {
+        margin-left: 28px;
+    }
+
+    .add-subtask-form, .subtask-input-row {
+        margin-left: 28px;
+    }
+
+    .btn-add-subtask {
+        margin-left: 28px;
     }
 }
